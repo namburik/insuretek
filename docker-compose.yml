@@ -1,0 +1,45 @@
+services:
+
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8082:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+
+  mcp-core:
+    build: .
+    command: python src/mcp_server/insuretek_core_data.py
+    env_file: docker.env
+    ports:
+      - "8091:8091"
+    depends_on:
+      - dynamodb-local
+
+  mcp-semantic:
+    build: .
+    command: python src/mcp_server/insuretek_semantic_context.py
+    env_file: docker.env
+    ports:
+      - "8093:8093"
+    depends_on:
+      - dynamodb-local
+
+  mcp-workflow:
+    build: .
+    command: python src/mcp_server/insuretek_agent_workflow.py
+    env_file: docker.env
+    ports:
+      - "8092:8092"
+    depends_on:
+      - dynamodb-local
+
+  web:
+    build: .
+    command: python3 src/web_gateway/app.py
+    env_file: docker.env
+    ports:
+      - "6001:6001"
+    depends_on:
+      - mcp-core
+      - mcp-semantic
+      - mcp-workflow

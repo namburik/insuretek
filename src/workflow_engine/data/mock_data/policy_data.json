@@ -1,0 +1,12 @@
+{
+  "policy_data": {
+    "policy_type": "HOME",
+    "coverage_amount": "350000",
+    "deductible": "2500",
+    "declared_value": "320000",
+    "metadata": {
+      "underwriter": "auto",
+      "risk_band": "standard"
+    }
+  }
+}

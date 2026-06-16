@@ -1,0 +1,302 @@
+/* ─────────────────────────────────────────────
+   DataTable — CSS custom-property theming
+   Light defaults; [data-theme="dark"] + auto
+   ───────────────────────────────────────────── */
+
+/* ── Light theme (default) ── */
+.dt-wrap {
+  --dt-header-bg:    #1E293B;
+  --dt-header-fg:    #FFFFFF;
+  --dt-row-bg:       #FFFFFF;
+  --dt-row-alt-bg:   #F1F5F9;
+  --dt-border:       #E2E8F0;
+  --dt-body-fg:      #0F172A;
+  --dt-muted-fg:     #64748B;
+  --dt-row-hover:    #EFF6FF;
+  --dt-caption-fg:   #475569;
+
+  --dt-green-bg:     #DCFCE7;
+  --dt-green-fg:     #15803D;
+  --dt-amber-bg:     #FEF3C7;
+  --dt-amber-fg:     #B45309;
+  --dt-red-bg:       #FEE2E2;
+  --dt-red-fg:       #B91C1C;
+  --dt-neutral-bg:   #F1F5F9;
+  --dt-neutral-fg:   #475569;
+
+  --dt-id-bg:        #F8FAFC;
+  --dt-id-border:    #CBD5E1;
+  --dt-id-fg:        #334155;
+  --dt-id-copy-fg:   #94A3B8;
+  --dt-id-hover-bg:  #EFF6FF;
+  --dt-id-copied-fg: #15803D;
+
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--dt-body-fg);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--dt-border);
+  background: var(--dt-row-bg);
+}
+
+/* ── Explicit dark theme ── */
+.dt-wrap[data-theme="dark"] {
+  --dt-header-bg:    #111827;
+  --dt-header-fg:    #FFFFFF;
+  --dt-row-bg:       #111827;
+  --dt-row-alt-bg:   #1F2937;
+  --dt-border:       #374151;
+  --dt-body-fg:      #F9FAFB;
+  --dt-muted-fg:     #9CA3AF;
+  --dt-row-hover:    #1E3A5F;
+  --dt-caption-fg:   #9CA3AF;
+
+  --dt-green-bg:     #064E3B;
+  --dt-green-fg:     #4ADE80;
+  --dt-amber-bg:     #78350F;
+  --dt-amber-fg:     #FBBF24;
+  --dt-red-bg:       #7F1D1D;
+  --dt-red-fg:       #F87171;
+  --dt-neutral-bg:   #374151;
+  --dt-neutral-fg:   #D1D5DB;
+
+  --dt-id-bg:        #1F2937;
+  --dt-id-border:    #4B5563;
+  --dt-id-fg:        #E2E8F0;
+  --dt-id-copy-fg:   #6B7280;
+  --dt-id-hover-bg:  #1E3A5F;
+  --dt-id-copied-fg: #4ADE80;
+}
+
+/* ── Auto: follow OS preference ── */
+@media (prefers-color-scheme: dark) {
+  .dt-wrap[data-theme="auto"] {
+    --dt-header-bg:    #111827;
+    --dt-header-fg:    #FFFFFF;
+    --dt-row-bg:       #111827;
+    --dt-row-alt-bg:   #1F2937;
+    --dt-border:       #374151;
+    --dt-body-fg:      #F9FAFB;
+    --dt-muted-fg:     #9CA3AF;
+    --dt-row-hover:    #1E3A5F;
+    --dt-caption-fg:   #9CA3AF;
+
+    --dt-green-bg:     #064E3B;
+    --dt-green-fg:     #4ADE80;
+    --dt-amber-bg:     #78350F;
+    --dt-amber-fg:     #FBBF24;
+    --dt-red-bg:       #7F1D1D;
+    --dt-red-fg:       #F87171;
+    --dt-neutral-bg:   #374151;
+    --dt-neutral-fg:   #D1D5DB;
+
+    --dt-id-bg:        #1F2937;
+    --dt-id-border:    #4B5563;
+    --dt-id-fg:        #E2E8F0;
+    --dt-id-copy-fg:   #6B7280;
+    --dt-id-hover-bg:  #1E3A5F;
+    --dt-id-copied-fg: #4ADE80;
+  }
+}
+
+/* ── Scroll container ── */
+.dt-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Table base ── */
+.dt-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+/* ── Caption ── */
+.dt-caption {
+  caption-side: top;
+  text-align: left;
+  padding: 12px 16px 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--dt-caption-fg);
+  background: var(--dt-row-bg);
+  border-bottom: 1px solid var(--dt-border);
+}
+
+/* ── Header ── */
+.dt-header-row {
+  background: var(--dt-header-bg);
+}
+
+.dt-th {
+  padding: 11px 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dt-header-fg);
+  white-space: nowrap;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+/* ── Body rows ── */
+.dt-row {
+  background: var(--dt-row-bg);
+  border-bottom: 1px solid var(--dt-border);
+  transition: background 120ms ease;
+}
+
+.dt-row:last-child {
+  border-bottom: none;
+}
+
+/* Zebra striping */
+.dt-row:nth-child(even) {
+  background: var(--dt-row-alt-bg);
+}
+
+.dt-row--clickable {
+  cursor: pointer;
+}
+
+.dt-row--clickable:hover {
+  background: var(--dt-row-hover) !important;
+}
+
+.dt-td {
+  padding: 10px 16px;
+  color: var(--dt-body-fg);
+  border-bottom: 1px solid var(--dt-border);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.dt-row:last-child .dt-td {
+  border-bottom: none;
+}
+
+/* ── Empty state ── */
+.dt-empty-row {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--dt-muted-fg);
+  font-style: italic;
+}
+
+.dt-empty {
+  color: var(--dt-muted-fg);
+}
+
+/* ── Status badges ── */
+.dt-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.dt-badge--green {
+  background: var(--dt-green-bg);
+  color: var(--dt-green-fg);
+}
+
+.dt-badge--amber {
+  background: var(--dt-amber-bg);
+  color: var(--dt-amber-fg);
+}
+
+.dt-badge--red {
+  background: var(--dt-red-bg);
+  color: var(--dt-red-fg);
+}
+
+.dt-badge--neutral {
+  background: var(--dt-neutral-bg);
+  color: var(--dt-neutral-fg);
+}
+
+/* ── ID / hash cell — truncated, copyable ── */
+.dt-id-cell {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 7px;
+  background: var(--dt-id-bg);
+  border: 1px solid var(--dt-id-border);
+  border-radius: 5px;
+  color: var(--dt-id-fg);
+  font-family: 'SFMono-Regular', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  max-width: 100%;
+  transition: background 100ms ease, border-color 100ms ease;
+  box-sizing: border-box;
+}
+
+.dt-id-cell:hover {
+  background: var(--dt-id-hover-bg);
+  border-color: currentColor;
+}
+
+.dt-id-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+  min-width: 0;
+}
+
+.dt-copy-icon {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--dt-id-copy-fg);
+  line-height: 1;
+  transition: color 120ms ease;
+}
+
+.dt-id-cell:hover .dt-copy-icon {
+  color: var(--dt-body-fg);
+}
+
+.dt-id-cell.dt-copied .dt-copy-icon {
+  color: var(--dt-id-copied-fg);
+}
+
+/* ── Skeleton loader ── */
+.dt-skeleton-row .dt-td {
+  padding: 14px 16px;
+}
+
+.dt-skeleton-cell {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--dt-border) 25%,
+    var(--dt-row-alt-bg) 50%,
+    var(--dt-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: dt-shimmer 1.4s ease infinite;
+}
+
+@keyframes dt-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

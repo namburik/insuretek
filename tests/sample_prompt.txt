@@ -1,0 +1,140 @@
+Create_ a new Enterprise merchant and Tell me the merchant_id that was assigned
+
+**Basic Information:**
+- client_id: client_4a7f3c9b1e2d
+- enterprise_identifier: ENT-APEX001
+- account_name: Apex Payments apex001
+- account_alias: Apex apex001
+- merchant_type: Enterprise
+- processing_model: PayFac
+- primary_platform_id: direct
+
+**Location Address:**
+- line1: 100 Main St
+- line2: Suite 10
+- city: Dallas
+- state_or_province_code: TX
+- postal_code: 75201
+- country_code: US
+
+**Contact Information:**
+- email: ops_apex001@apex.com
+- phone: +12145550001
+- phone_country_code: 1
+
+**Payout Account:**
+- account_number: 987654321012
+- routing_number: 021000021
+- account_type: DDA
+- owner_name: Apex Corp
+- financial_institution_name: Wells Fargo
+- country_code: US
+
+**Merchant Account Setup:**
+- pricing_template: standard_pricing
+- processing_template: payfast_processing
+- payout_template: daily_payout
+- business_profile: tech_saas
+- business_description: Payment processing for e-commerce
+- dba_name: Apex Payments DBA apex001
+- merchant_country: US
+
+**API Entitlements:**
+- active_endpoints: [v1/transactions, v1/refunds, v1/settlements]
+
+**Payment Methods and Currency:**
+- point_of_sale_currency_code: USD
+- settlement_currency_code: USD
+- allow_oct: true
+- allow_aft: true
+- allow_early_warning_system: true
+- allow_pinless_debit_bill_pay: true
+- allow_ecommerce_pinless_debit: true
+- allow_mobile_device_payment: true
+- digital_wallet_provider_codes: [APPLE_PAY, GOOGLE_PAY]
+
+**Security and Risk:**
+- three_ds_requestor_id: 3DS_REQ_001
+- allow_consumer_fraud_check: true
+- allow_fraud_advice_reporting: true
+- allow_fraud_scoring: true
+- card_masking_format_name: LAST_FOUR
+
+**Value Added Services:**
+- consumer_profile_management_enabled: true
+- recurring_billing_enabled: true
+- managed_service_entitlement: true
+
+**Tokenization Configuration:**
+- allow_acquirer_tokenization: true
+- allow_digital_tokenization: true
+- allow_processor_tokens: true
+- token_requestors: [REQ_001, REQ_002]
+
+**Account Updater Configuration:**
+- allow_account_updater: true
+- account_updater_networks: [VISA, MASTERCARD]
+- allow_vault_updater: true
+
+**Checkout Configuration:**
+- allow_hosted_fields: true
+- allow_recurring_billing: true
+
+**Reporting Configuration:**
+- allow_advanced_reporting: true
+- allow_analytics_reporting: true
+- allow_api_reporting: true
+- reporting_package_type: Advanced
+
+**Settlement Configuration:**
+- timezone_code: US/Central
+- settlement_time: 15:00
+- allow_manual_batch_settlement: true
+
+**Transaction Processing Configuration:**
+- allow_payment_processing: true
+- allow_payment_gateway_routing: true
+- payment_gateway_name: Stripe Gateway
+- transaction_platform_code: STRIPE_001
+
+**Transaction Lifecycle - Authorization Configuration:**
+- retry_code: STANDARD
+- allow_auth_exemptions: true
+- auth_exemptions: [LOW_VALUE, RECURRING]
+- allow_hot_auth: true
+- skip_auth_on_soft_decline: false
+- allow_enhanced_auth_card_type: true
+- enable_deposit_fees: false
+
+**Transaction Lifecycle - Advanced Retry Configuration:**
+- retry_billing_frequency_unit_code: DAYS
+- retry_billing_schedule_count: 3
+- retry_strategy_code: AGGRESSIVE
+
+**Transaction Lifecycle - Basic Retry Configuration:**
+- allowed_retry_count: 2
+- retry_interval_day_count: 3
+
+**Transaction Lifecycle - Capture Configuration:**
+- allow_standalone_capture: true
+- allow_force_capture: false
+- delayed_capture_minute_count: 0
+
+**Transaction Lifecycle - Refund Configuration:**
+- allow_standalone_refund: true
+- allow_refund_request: true
+- allow_transaction_refund: true
+
+**Transaction Lifecycle - Void Configuration:**
+- allow_same_day_void: true
+- allow_transaction_void: true
+
+**Supplemental Data:**
+- allow_account_name_inquiry: true
+- allow_avs: true
+- statement_descriptor_text: APEX PAYMENTS
+
+**Optional Customizations:**
+- external_merchant_id: EXT_APEX_apex001
+- tier_code: ENTERPRISE
+- delivery_lead_time: 2

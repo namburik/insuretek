@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authenticating…</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #0F172A;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      width: 320px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    .logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 1.5rem; }
+    .logo svg { flex-shrink: 0; }
+    .logo span { font-weight: 700; font-size: 16px; color: #4F46E5; }
+    #status { font-size: 0.95rem; color: #64748B; }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid #EEF2FF;
+      border-top-color: #4F46E5;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .success { color: #10B981; font-weight: 600; }
+    .error   { color: #EF4444; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <rect width="28" height="28" rx="8" fill="#4F46E5"/>
+        <path d="M8 14h4.5a1.5 1.5 0 0 0 0-3H8v10h2.5v-3.5H12l2 3.5H17l-2.3-4a3.5 3.5 0 0 0-2.2-6.5H8v10" fill="white" opacity=".9"/>
+        <path d="M19 8h-2v12h2V8Z" fill="white" opacity=".6"/>
+      </svg>
+      <span>Insuretek</span>
+    </div>
+    <div class="spinner" id="spinner"></div>
+    <div id="status">Authenticating, please wait…</div>
+  </div>
+
+  <script>
+    (async () => {
+      const statusEl = document.getElementById('status');
+      const spinner  = document.getElementById('spinner');
+
+      const params        = new URLSearchParams(window.location.search);
+      const code          = params.get('code');
+      const oauthError    = params.get('error');
+      const oauthErrorDesc= params.get('error_description');
+
+      function showError(msg) {
+        spinner.style.display = 'none';
+        statusEl.textContent = msg;
+        statusEl.className = 'error';
+        setTimeout(() => { window.location.href = '/'; }, 3500);
+      }
+
+      if (oauthError) { showError(`Auth error: ${oauthErrorDesc || oauthError}`); return; }
+      if (!code)      { showError('No authorization code received.'); return; }
+
+      try {
+        const provider = params.get('state') === 'linkedin' ? 'linkedin' : 'github';
+        const redirectUri = window.location.origin + '/auth/callback';
+
+        const endpoint = provider === 'linkedin'
+          ? '/api/auth/linkedin-exchange-token'
+          : '/api/auth/exchange-token';
+
+        const body = provider === 'linkedin'
+          ? { code, redirect_uri: redirectUri }
+          : { code };
+
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(12000),
+        });
+
+        if (!resp.ok) {
+          const txt = await resp.text();
+          throw new Error(`Server error ${resp.status}: ${txt}`);
+        }
+
+        const data = await resp.json();
+        if (data.error) { showError(`Error: ${data.error}`); return; }
+
+        if (provider === 'linkedin') {
+          localStorage.setItem('linkedin-auth', JSON.stringify({
+            email: data.email,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            token: data.token,
+          }));
+        } else {
+          localStorage.setItem('github-auth', JSON.stringify({
+            login: data.login,
+            email: data.email,
+            avatar_url: data.avatar_url,
+            token: data.token,
+          }));
+        }
+
+        if (window.history.replaceState) {
+          const u = new URL(window.location.href);
+          u.searchParams.delete('code');
+          window.history.replaceState({}, document.title, u.pathname);
+        }
+
+        spinner.style.display = 'none';
+        statusEl.textContent = 'Signed in! Redirecting…';
+        statusEl.className = 'success';
+
+        const returnTo = (() => { try { return sessionStorage.getItem('auth-return-to'); } catch(e){ return null; } })();
+        if (returnTo) { try { sessionStorage.removeItem('auth-return-to'); } catch(e){} }
+        setTimeout(() => { window.location.href = returnTo || '/'; }, 1200);
+
+      } catch(err) {
+        showError(`Error: ${err.message}`);
+      }
+    })();
+  </script>
+</body>
+</html>

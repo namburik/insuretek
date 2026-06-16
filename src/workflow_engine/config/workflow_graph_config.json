@@ -1,0 +1,47 @@
+{
+  "workflow": "applicant_underwriting",
+  "nodes": [
+    { "name": "initiate",           "handler": "initiate"           },
+    { "name": "await_webhook",      "handler": "await_webhook"      },
+    { "name": "process_webhook",    "handler": "process_webhook"    },
+    { "name": "decision_node",      "handler": "decision_node"      },
+    { "name": "human_review",       "handler": "human_review"       },
+    { "name": "activate_applicant", "handler": "activate_applicant" },
+    { "name": "handle_rejection",   "handler": "handle_rejection"   }
+  ],
+  "edges": [
+    { "from": "__start__",         "to": "initiate"          },
+    { "from": "initiate",          "to": "await_webhook"     },
+    { "from": "await_webhook",     "to": "process_webhook"   },
+    { "from": "activate_applicant", "to": "__end__"           },
+    { "from": "handle_rejection",  "to": "__end__"           }
+  ],
+  "conditional_edges": [
+    {
+      "from": "process_webhook",
+      "router": "route_after_webhook",
+      "routes": {
+        "await_webhook":    "await_webhook",
+        "decision_node":    "decision_node",
+        "handle_rejection": "handle_rejection"
+      }
+    },
+    {
+      "from": "decision_node",
+      "router": "route_risk_decision",
+      "routes": {
+        "activate_applicant": "activate_applicant",
+        "human_review":       "human_review",
+        "handle_rejection":   "handle_rejection"
+      }
+    },
+    {
+      "from": "human_review",
+      "router": "route_human_decision",
+      "routes": {
+        "activate_applicant": "activate_applicant",
+        "handle_rejection":   "handle_rejection"
+      }
+    }
+  ]
+}

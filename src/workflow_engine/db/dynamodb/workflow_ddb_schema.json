@@ -1,0 +1,143 @@
+{
+  "tables": [
+    {
+      "TableName": "itek_workflow_applicant",
+      "KeySchema": [
+        {"AttributeName": "workflow_id", "KeyType": "HASH"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "workflow_id",    "AttributeType": "S"},
+        {"AttributeName": "applicant_id",    "AttributeType": "S"},
+        {"AttributeName": "current_state",  "AttributeType": "S"},
+        {"AttributeName": "created_at",     "AttributeType": "S"}
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "applicant-created-index",
+          "KeySchema": [
+            {"AttributeName": "applicant_id", "KeyType": "HASH"},
+            {"AttributeName": "created_at",  "KeyType": "RANGE"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        },
+        {
+          "IndexName": "state-created-index",
+          "KeySchema": [
+            {"AttributeName": "current_state", "KeyType": "HASH"},
+            {"AttributeName": "created_at",    "KeyType": "RANGE"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        }
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+
+    {
+      "TableName": "itek_workflow_approval_tasks",
+      "KeySchema": [
+        {"AttributeName": "workflow_id", "KeyType": "HASH"},
+        {"AttributeName": "task_id", "KeyType": "RANGE"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "workflow_id",  "AttributeType": "S"},
+        {"AttributeName": "task_id",      "AttributeType": "S"},
+        {"AttributeName": "reference_id", "AttributeType": "S"},
+        {"AttributeName": "status",       "AttributeType": "S"}
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "reference_id-index",
+          "KeySchema": [
+            {"AttributeName": "reference_id", "KeyType": "HASH"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        },
+        {
+          "IndexName": "workflow-status-index",
+          "KeySchema": [
+            {"AttributeName": "workflow_id", "KeyType": "HASH"},
+            {"AttributeName": "status",      "KeyType": "RANGE"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        }
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+
+    {
+      "TableName": "itek_workflow_checkpoints",
+      "KeySchema": [
+        {"AttributeName": "thread_id",     "KeyType": "HASH"},
+        {"AttributeName": "checkpoint_id", "KeyType": "RANGE"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "thread_id",     "AttributeType": "S"},
+        {"AttributeName": "checkpoint_id", "AttributeType": "S"},
+        {"AttributeName": "created_at",    "AttributeType": "S"}
+      ],
+      "LocalSecondaryIndexes": [
+        {
+          "IndexName": "thread-time-index",
+          "KeySchema": [
+            {"AttributeName": "thread_id",  "KeyType": "HASH"},
+            {"AttributeName": "created_at", "KeyType": "RANGE"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        }
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+
+    {
+      "TableName": "itek_workflow_checkpoint_writes",
+      "KeySchema": [
+        {"AttributeName": "thread_id", "KeyType": "HASH"},
+        {"AttributeName": "sk",        "KeyType": "RANGE"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "thread_id", "AttributeType": "S"},
+        {"AttributeName": "sk",        "AttributeType": "S"}
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    },
+
+    {
+      "TableName": "itek_workflow_applicant_request",
+      "KeySchema": [
+        {"AttributeName": "request_id", "KeyType": "HASH"}
+      ],
+      "AttributeDefinitions": [
+        {"AttributeName": "request_id",  "AttributeType": "S"},
+        {"AttributeName": "status",      "AttributeType": "S"},
+        {"AttributeName": "created_at",  "AttributeType": "S"},
+        {"AttributeName": "applicant_id","AttributeType": "S"}
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "status-created-index",
+          "KeySchema": [
+            {"AttributeName": "status",     "KeyType": "HASH"},
+            {"AttributeName": "created_at", "KeyType": "RANGE"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        },
+        {
+          "IndexName": "applicant-created-index",
+          "KeySchema": [
+            {"AttributeName": "applicant_id", "KeyType": "HASH"},
+            {"AttributeName": "created_at",   "KeyType": "RANGE"}
+          ],
+          "Projection": {"ProjectionType": "ALL"}
+        }
+      ],
+      "BillingMode": "PAY_PER_REQUEST"
+    }
+  ],
+
+  "ttl": [
+    {
+      "TableName": "itek_workflow_applicant_request",
+      "AttributeName": "ttl"
+    }
+  ]
+}

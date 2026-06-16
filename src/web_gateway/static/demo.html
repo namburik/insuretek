@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paytek — See It In Action</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --indigo:       #4f46e5;
+      --indigo-dark:  #4338ca;
+      --indigo-light: #eef2ff;
+      --indigo-border:#c7d2fe;
+      --slate-50:     #f8fafc;
+      --slate-100:    #f1f5f9;
+      --slate-200:    #e2e8f0;
+      --slate-400:    #94a3b8;
+      --slate-500:    #64748b;
+      --slate-700:    #334155;
+      --slate-900:    #0f172a;
+      --green:        #16a34a;
+      --green-light:  #f0fdf4;
+      --green-border: #bbf7d0;
+    }
+
+    body, html {
+      min-height: 100%;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--slate-50);
+      color: var(--slate-900);
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 24px;
+      background: #fff;
+      border-bottom: 1px solid var(--slate-200);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--slate-900);
+    }
+    .logo-mark {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: var(--indigo);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 14px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--indigo-light);
+      color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+    }
+
+    /* ── Shell ── */
+    .shell {
+      max-width: 640px;
+      margin: 40px auto;
+      padding: 0 16px 64px;
+    }
+
+    /* ── Gate card ── */
+    .gate-card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    .gate-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--indigo);
+      margin-bottom: 10px;
+    }
+    .gate-heading { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .gate-sub {
+      font-size: 14px;
+      color: var(--slate-500);
+      line-height: 1.55;
+      margin-bottom: 28px;
+    }
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+    .field label { font-size: 13px; font-weight: 600; color: var(--slate-700); }
+    .field input {
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 120ms, box-shadow 120ms;
+    }
+    .field input:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px var(--indigo-light); }
+    .field input.err { border-color: #ef4444; }
+    .btn-primary {
+      width: 100%;
+      padding: 11px;
+      background: var(--indigo);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 120ms;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--indigo-dark); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .gate-error { font-size: 13px; color: #ef4444; margin-top: 10px; min-height: 18px; }
+
+    /* ── Presentation card ── */
+    .pres-card {
+      background: #fff;
+      border: 1px solid var(--slate-200);
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    /* Step progress bar */
+    .step-track {
+      height: 3px;
+      background: var(--slate-100);
+    }
+    .step-fill {
+      height: 100%;
+      background: var(--indigo);
+      transition: width 400ms ease;
+    }
+
+    /* Narrative header */
+    .narrative {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--slate-200);
+    }
+    .narrative-step {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--slate-400);
+      margin-bottom: 4px;
+    }
+    .narrative-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--slate-900);
+      margin-bottom: 4px;
+    }
+    .narrative-desc {
+      font-size: 13px;
+      color: var(--slate-500);
+      line-height: 1.5;
+    }
+
+    /* Chat area */
+    .messages {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 280px;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+    .bubble-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+    }
+    .bubble-row.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .bubble-row.ai   .avatar { background: var(--indigo-light); color: var(--indigo); }
+    .bubble-row.user .avatar { background: var(--slate-100);    color: var(--slate-500); }
+    .bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble.ai   { background: var(--slate-100); color: var(--slate-900); border-bottom-left-radius: 4px; }
+    .bubble.user { background: var(--indigo);    color: #fff;              border-bottom-right-radius: 4px; }
+
+    /* Typing dots */
+    .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 10px 14px; }
+    .typing-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--slate-400);
+      animation: tdot 1.1s ease-in-out infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.18s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes tdot {
+      0%, 80%, 100% { transform: translateY(0); }
+      40%           { transform: translateY(-6px); }
+    }
+
+    /* Action footer */
+    .action-footer {
+      padding: 16px 22px;
+      border-top: 1px solid var(--slate-200);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Next-step button */
+    .next-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+      padding: 13px 18px;
+      background: var(--indigo);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 120ms, opacity 120ms;
+      text-align: left;
+    }
+    .next-btn:hover:not(:disabled) { background: var(--indigo-dark); }
+    .next-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .next-btn-arrow { font-size: 18px; flex-shrink: 0; }
+    .next-btn-sub { font-size: 12px; font-weight: 400; opacity: 0.85; margin-top: 1px; }
+
+    /* Skip hint */
+    .skip-hint {
+      font-size: 12px;
+      color: var(--slate-400);
+      text-align: center;
+    }
+    .skip-link {
+      color: var(--slate-500);
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    /* CTA */
+    .cta-block {
+      padding: 20px 22px;
+      background: var(--green-light);
+      border-top: 1px solid var(--green-border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .cta-heading { font-size: 15px; font-weight: 700; color: var(--green); }
+    .cta-sub { font-size: 13px; color: var(--slate-600, #475569); line-height: 1.4; }
+    .cta-btn {
+      padding: 12px 18px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 120ms;
+    }
+    .cta-btn:hover { background: #15803d; }
+    .restart-link {
+      font-size: 12px;
+      color: var(--slate-400);
+      text-align: center;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .restart-link:hover { color: var(--slate-500); }
+
+    /* ── Labs CTA ── */
+    .labs-cta {
+      padding: 16px 22px 20px;
+      border-top: 1px solid var(--slate-200);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .labs-cta-heading { font-size: 13px; font-weight: 700; color: var(--slate-700); }
+    .labs-cta-sub { font-size: 12px; color: var(--slate-500); line-height: 1.4; }
+    .labs-btn {
+      padding: 10px 16px;
+      background: var(--indigo-light);
+      color: var(--indigo);
+      border: 1px solid var(--indigo-border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 120ms;
+      text-align: center;
+    }
+    .labs-btn:hover { background: #e0e7ff; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-mark">P</div>
+    Paytek
+  </div>
+  <span class="badge">Live Demo</span>
+</header>
+
+<!-- Gate screen -->
+<div class="shell" id="gate-screen">
+  <div class="gate-card">
+    <div class="gate-eyebrow">Interactive walkthrough</div>
+    <h1 class="gate-heading">See how merchant onboarding works</h1>
+    <p class="gate-sub">
+      A guided, 5-step walkthrough of the Paytek onboarding experience — from first prompt to submitted merchant record.
+    </p>
+    <form id="gate-form" novalidate>
+      <div class="field">
+        <label for="f-email">Work email <span style="color:#ef4444">*</span></label>
+        <input id="f-email" type="email" placeholder="you@company.com" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="f-name">Your name</label>
+        <input id="f-name" type="text" placeholder="Jane Smith" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="f-company">Company</label>
+        <input id="f-company" type="text" placeholder="Acme Inc." autocomplete="organization" />
+      </div>
+      <button type="submit" class="btn-primary" id="gate-btn">Watch the demo →</button>
+      <p class="gate-error" id="gate-error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- Presentation screen -->
+<div class="shell hidden" id="pres-screen">
+  <div class="pres-card">
+
+    <div class="step-track"><div class="step-fill" id="step-fill"></div></div>
+
+    <div class="narrative">
+      <div class="narrative-step" id="step-label">Step 1 of 4</div>
+      <div class="narrative-title" id="step-title"></div>
+      <div class="narrative-desc" id="step-desc"></div>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="action-footer" id="action-footer">
+      <button class="next-btn" id="next-btn" disabled>
+        <div>
+          <div id="next-btn-label">Loading…</div>
+          <div class="next-btn-sub" id="next-btn-sub"></div>
+        </div>
+        <span class="next-btn-arrow">→</span>
+      </button>
+      <div class="skip-hint">
+        Already convinced? <span class="skip-link" id="skip-link">Skip to sign up</span>
+      </div>
+    </div>
+
+    <div class="cta-block hidden" id="cta-block">
+      <div class="cta-heading">Ready to onboard your merchants?</div>
+      <div class="cta-sub">You just saw the full flow. Set up your account and go live in minutes.</div>
+      <button class="cta-btn" onclick="window.open('https://paytekai.online/','_blank')">
+        Get started at paytekai.online →
+      </button>
+      <div class="restart-link" id="restart-link">Watch the demo again</div>
+    </div>
+
+    <div class="labs-cta hidden" id="labs-cta">
+      <div class="labs-cta-heading">Want to explore further?</div>
+      <div class="labs-cta-sub">Paytek Labs is an open-ended mode — ask about merchants, analytics, platforms, or anything else.</div>
+      <button class="labs-btn" id="labs-btn">
+        Explore Paytek Labs →
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+
+  // ── Demo script ──────────────────────────────────────────────────────────────
+  const STEPS = [
+    {
+      title: 'Starting the onboarding conversation',
+      desc:  'Paytek collects merchant details conversationally — no forms, no PDFs.',
+      btnLabel: 'Introduce the merchant',
+      btnSub:   'Business name, type & platform',
+      message:  'I want to onboard a new merchant. Business name: Acme Payments, enterprise ID: ENT-ACM-001, merchant type: SMB, primary platform: direct, acceptance channel: CNP, pricing model: InterchangePlus, merchant industry: Technology',
+    },
+    {
+      title: 'Adding contact & address',
+      desc:  'Location and contact details are captured in one natural exchange.',
+      btnLabel: 'Provide contact details',
+      btnSub:   'Address, email & phone',
+      message:  'Address: 100 Main St, Dallas, TX 75201, US. Email: ops@acme.com, phone: +1 214-555-0001',
+    },
+    {
+      title: 'Setting up payout & volume',
+      desc:  'Banking and processing volume — Paytek validates and structures the data automatically.',
+      btnLabel: 'Add payout & volume',
+      btnSub:   'Bank account & monthly volume',
+      message:  'Payout account: account number 987654321012, routing number 021000021, account type DDA, owner name Acme Payments, financial institution Bank of Texas. Projected monthly volume: 50000, currency USD, business profile: tech_saas, description: SaaS payment processing',
+    },
+    {
+      title: 'Finalizing optional fields',
+      desc:  'Paytek offers optional enrichment fields — add them or skip straight to submission.',
+      btnLabel: 'Add optional details',
+      btnSub:   'Industry, channel & processing model',
+      message:  'No',
+    },
+    {
+      title: 'Final submission',
+      desc:  'One confirmation triggers the full merchant workflow — no manual handoff needed.',
+      btnLabel: 'Confirm & submit',
+      btnSub:   'Launches the onboarding workflow',
+      message:  'Yes, submit',
+    },
+  ];
+
+  // ── State ────────────────────────────────────────────────────────────────────
+  let demoToken = '';
+  let sessionId = '';
+  let currentStep = 0;
+  let busy = false;
+
+  // ── Utilities ────────────────────────────────────────────────────────────────
+  function genId() {
+    return typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(16).slice(2, 10);
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function scrollBottom() {
+    const el = $('messages');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function addBubble(role, text) {
+    const row = document.createElement('div');
+    row.className = `bubble-row ${role}`;
+
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = role === 'ai' ? 'P' : 'You';
+
+    const bub = document.createElement('div');
+    bub.className = `bubble ${role}`;
+    bub.textContent = text;
+
+    row.appendChild(av);
+    row.appendChild(bub);
+    $('messages').appendChild(row);
+    scrollBottom();
+    return bub;
+  }
+
+  function showTyping() {
+    const row = document.createElement('div');
+    row.className = 'bubble-row ai';
+    row.id = 'typing-row';
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = 'P';
+    const ind = document.createElement('div');
+    ind.className = 'bubble ai typing-indicator';
+    ind.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    row.appendChild(av);
+    row.appendChild(ind);
+    $('messages').appendChild(row);
+    scrollBottom();
+  }
+
+  function removeTyping() {
+    const el = $('typing-row');
+    if (el) el.remove();
+  }
+
+  function setProgress(step, total) {
+    $('step-fill').style.width = `${Math.round(((step) / total) * 100)}%`;
+    $('step-label').textContent = `Step ${step} of ${total}`;
+  }
+
+  function loadStep(index) {
+    const step = STEPS[index];
+    $('step-title').textContent = step.title;
+    $('step-desc').textContent  = step.desc;
+    setProgress(index + 1, STEPS.length);
+
+    const btn = $('next-btn');
+    $('next-btn-label').textContent = step.btnLabel;
+    $('next-btn-sub').textContent   = step.btnSub;
+    btn.disabled = false;
+  }
+
+  // ── Gate ─────────────────────────────────────────────────────────────────────
+  $('gate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email   = $('f-email').value.trim();
+    const name    = $('f-name').value.trim();
+    const company = $('f-company').value.trim();
+    const errEl   = $('gate-error');
+    const btn     = $('gate-btn');
+
+    if (!email || !email.includes('@')) {
+      $('f-email').classList.add('err');
+      errEl.textContent = 'Please enter a valid email address.';
+      return;
+    }
+    $('f-email').classList.remove('err');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Starting…';
+
+    try {
+      const resp = await fetch('/demo/gate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, company, referrer: document.referrer || '' }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.demo_token) throw new Error(data.error || 'Gate failed');
+
+      demoToken = data.demo_token;
+      sessionId = genId();
+      startPresentation();
+    } catch (err) {
+      errEl.textContent = `Error: ${err.message}`;
+      btn.disabled = false;
+      btn.textContent = 'Watch the demo →';
+    }
+  });
+
+  // ── Presentation ─────────────────────────────────────────────────────────────
+  function startPresentation() {
+    $('gate-screen').classList.add('hidden');
+    $('pres-screen').classList.remove('hidden');
+
+    // Welcome message
+    addBubble('ai', "Hi! I'll walk you through onboarding a merchant on Paytek. Click each step below to see how it works.");
+
+    loadStep(0);
+  }
+
+  async function runStep(index) {
+    if (busy) return;
+    const step = STEPS[index];
+    busy = true;
+    $('next-btn').disabled = true;
+
+    // Show the scripted user message
+    addBubble('user', step.message);
+    showTyping();
+
+    let aiBubble = null;
+    let fullReply = '';
+
+    try {
+      const resp = await fetch('/demo/intake/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ demo_token: demoToken, session_id: sessionId, message: step.message }),
+      });
+      if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).error || resp.statusText);
+
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.type === 'token' && evt.token) {
+              if (!aiBubble) { removeTyping(); aiBubble = addBubble('ai', ''); }
+              fullReply += evt.token;
+              aiBubble.textContent = fullReply;
+              scrollBottom();
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      removeTyping();
+      addBubble('ai', `Something went wrong: ${err.message}`);
+    }
+
+    busy = false;
+    const nextIndex = index + 1;
+
+    if (nextIndex < STEPS.length) {
+      currentStep = nextIndex;
+      loadStep(nextIndex);
+    } else {
+      // All steps done — show CTA
+      setProgress(STEPS.length, STEPS.length);
+      $('action-footer').classList.add('hidden');
+      $('cta-block').classList.remove('hidden');
+      $('labs-cta').classList.remove('hidden');
+      $('labs-btn').onclick = () => window.open(
+        `/?mode=labs&merchant_id=06623088-079c-446b-9cdb-e3fc840fcbd3&from_demo=1&demo_token=${demoToken}`,
+        '_blank'
+      );
+    }
+  }
+
+  $('next-btn').addEventListener('click', () => runStep(currentStep));
+
+  $('skip-link').addEventListener('click', () => {
+    $('action-footer').classList.add('hidden');
+    $('cta-block').classList.remove('hidden');
+    $('labs-cta').classList.remove('hidden');
+  });
+
+  $('restart-link').addEventListener('click', () => {
+    // Reset state and restart
+    $('messages').innerHTML = '';
+    currentStep = 0;
+    busy = false;
+    sessionId = genId();
+    $('cta-block').classList.add('hidden');
+    $('labs-cta').classList.add('hidden');
+    $('action-footer').classList.remove('hidden');
+    addBubble('ai', "Hi! I'll walk you through onboarding a merchant on Paytek. Click each step below to see how it works.");
+    loadStep(0);
+  });
+
+})();
+</script>
+</body>
+</html>

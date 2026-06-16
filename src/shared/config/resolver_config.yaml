@@ -1,0 +1,113 @@
+judge:
+  enabled: true
+
+metadata:
+  enabled: true
+
+guardian:
+  token_limit: 1000
+  checked_sources: [react]
+  unguarded_agents: [applicant_agent, workflow_agent, sme_agent]
+  bulk_destructive_verbs: [harm,delete, remove, drop, deactivate, purge, wipe, clear, revoke, cancel, terminate, suspend, truncate, erase, destroy, reset, archive, invalidate, flush]
+  bulk_quantifiers: [all, every, bulk]
+  destructive_verbs: [harm,delete, remove, drop, deactivate, purge, revoke, cancel, terminate, suspend, void, erase, destroy, truncate, reset, archive, invalidate, flush]
+  write_verbs: [update, modify, change, set, rotate, edit, disable]
+  name_fields: [applicant_name, name]
+  explicit_id_patterns:
+    - '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    - 'pol_[a-z0-9]{8,}'
+
+reflection:
+  max_iterations: 3
+  pass_through_on_cannot_correct: true
+
+graph:
+  name: applicant_management_langgraph
+  routing_mode: intent
+  default_route: applicant_agent
+  agent_timeout: 300
+
+  nodes:
+
+    # Handles write operations: create/update/delete applicants, bind/cancel policies
+    - id: underwriting_agent
+      capability: admin
+      category: underwriting_and_lifecycle
+      description: >-
+        Handles all write operations: create applicant, update or delete applicant,
+        create policy, bind policy, cancel policy. Use for any mutation of applicant or policy records.
+      max_steps: 8
+      timeout: 300
+      tools:
+        - create_applicant
+        - update_applicant
+        - delete_applicant
+        - create_policy
+        - bind_policy
+        - cancel_policy
+        - get_applicant
+
+    # Read-only applicant queries and policy lookups
+    - id: applicant_agent
+      capability: applicant
+      category: applicant_intelligence
+      description: >-
+        Handles applicant read-only field lookups and list queries: get applicant by ID, search or
+        filter applicants by policy type, geographic distribution, active policy, policy history,
+        quote status. Does NOT handle semantic synthesis, risk cluster analysis, or ISAR/KG context — use sme_agent for those.
+      max_steps: 20
+      timeout: 300
+      tools:
+        - get_applicant
+        - search_applicants_by_policy_type
+        - get_all_applicants
+        - get_high_risk_applicants
+        - find_similar_applicants
+        - get_active_policy
+        - get_policy_history
+        - quote_applicant
+
+
+    # Workflow/job status queries — ONLY when the user explicitly asks about workflow or job status
+    - id: workflow_agent
+      capability: workflow
+      category: workflow_and_audit_status
+      description: >-
+        Handles all workflow tracking, audit, and forensic queries: orchestrator onboarding job
+        status (step results, HITL), gate-check approval workflow status, policy audit records
+        (session/correlation/policy_type/request), forensic entity timelines, causal chains,
+        cross-session history, and quality summaries.
+        Do NOT use for applicant data,  coverage and evidence semantic synthesis
+      max_steps: 10
+      timeout: 300
+      tools:
+        - get_orchestrator_status_by_request_id
+        - get_workflow_job_by_applicant_id
+        - get_policy_audit_by_session
+        - get_policy_audit_by_correlation
+        - get_policy_audit_by_policy_type
+        - get_policy_audit_summary
+        - get_forensic_audit
+        - get_causal_chain
+        - get_cross_session_history
+        - get_quality_summary
+
+    - id: sme_agent
+      capability: semantic
+      category: servicing_knowledge_base
+      description: >-
+        Handles analytical and semantic queries about applicants.
+        Use for: ISAR semantic synthesis (coverage, risk profile, underwriting gaps, premium estimate,
+        churn risk, cross-sell — derived from applicant context);
+        ISAR evidence and semantic analysis conclusions (isar evidence, evidence chain, analysis history);
+        KG applicant explanation (peer risk band, graph neighbourhood); similar applicant discovery
+        by applicant_id or free-text description; fraud ring or risk cluster detection.
+        Do NOT use for raw field lookups, list/filter queries (type, coverage count, applicant
+        lists), writes, or workflow/audit queries.
+      max_steps: 8
+      timeout: 300
+      tools:
+        - isar_explain_applicant
+        - get_isar_evidence
+        - kg_similar_applicants
+        - kg_detect_risk_cluster

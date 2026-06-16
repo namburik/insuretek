@@ -1,0 +1,45 @@
+# EC2 production — uses real AWS DynamoDB (IAM role) and Neo4j Aura (cloud)
+# Run with: docker compose -f docker-compose.prod.yml up --build -d
+
+services:
+
+  mcp-core:
+    build: .
+    command: python src/mcp_server/insuretek_core_data.py
+    env_file: docker.env.ec2
+    restart: unless-stopped
+
+  mcp-semantic:
+    build: .
+    command: python src/mcp_server/insuretek_semantic_context.py
+    env_file: docker.env.ec2
+    restart: unless-stopped
+
+  mcp-workflow:
+    build: .
+    command: python src/mcp_server/insuretek_agent_workflow.py
+    env_file: docker.env.ec2
+    restart: unless-stopped
+
+  web:
+    build: .
+    command: python3 -m uvicorn web_gateway.app:app --host 0.0.0.0 --port 6001
+    env_file: docker.env.ec2
+    depends_on:
+      - mcp-core
+      - mcp-semantic
+      - mcp-workflow
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - web
+    restart: unless-stopped

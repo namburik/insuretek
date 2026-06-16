@@ -1,0 +1,36 @@
+# Applicant similarity scoring — fields and weights used to compute match_score.
+#
+# Only fields the applicant provided during intake contribute to match_score.
+# If either applicant is missing a field, that dimension scores 0 automatically.
+#
+# Field names match Neo4j :Applicant node properties set from applicant intake
+# (see neo4j_client.upsert_applicant_properties).
+#
+# Applicant-provided intake fields:
+#   enterprise_identifier  — same business family (strongest signal)
+#   policy_type            — HOME / AUTO / COMMERCIAL / LIFE
+#   applicant_type         — SMB / Mid-Market / Enterprise / Aggregator
+#   industry               — business domain (Retail, Healthcare, Tech, …)
+#   state_or_province_code — from location_address (structured)
+#   country_code           — from location_address (structured)
+#
+# Future (requires cosine similarity, not exact match — not yet implemented):
+#   applicant_name, address line, contact info
+#
+# Changes take effect on service restart.
+
+applicant_similarity:
+  dimensions:
+    - field: enterprise_identifier
+      weight: 0.90
+    - field: policy_type
+      weight: 0.50
+    - field: industry
+      weight: 0.40
+    - field: applicant_type
+      weight: 0.30
+    - field: postal_code
+      weight: 0.30
+    - field: country_code
+      weight: 0.10
+  min_score: 0.10

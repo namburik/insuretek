@@ -1,0 +1,812 @@
+{
+  "tables": [
+    {
+      "TableName": "itek_login_activity",
+      "KeySchema": [
+        {
+          "AttributeName": "user_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "login_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "user_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "login_at",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "provider",
+          "AttributeType": "S"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "provider_index",
+          "KeySchema": [
+            {
+              "AttributeName": "provider",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "login_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 5,
+        "WriteCapacityUnits": 5
+      }
+    },
+    {
+      "TableName": "itek_portal_access",
+      "KeySchema": [
+        {
+          "AttributeName": "email_id",
+          "KeyType": "HASH"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "email_id",
+          "AttributeType": "S"
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 5,
+        "WriteCapacityUnits": 5
+      }
+    },
+    {
+      "TableName": "itek_policy_audit",
+      "KeySchema": [
+        {
+          "AttributeName": "audit_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "audit_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "created_at",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "session_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "correlation_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "policy_type",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "request_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "entity_id",
+          "AttributeType": "S"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "session_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "session_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "correlation_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "correlation_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "policy_type_index",
+          "KeySchema": [
+            {
+              "AttributeName": "policy_type",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "request_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "request_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "entity_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "entity_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      }
+    },
+    {
+      "TableName": "itek_applicants",
+      "KeySchema": [
+        {
+          "AttributeName": "applicant_id",
+          "KeyType": "HASH"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "applicant_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "policy_type",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "enterprise_identifier",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "created_at",
+          "AttributeType": "N"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "policy_type_index",
+          "KeySchema": [
+            {
+              "AttributeName": "policy_type",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "enterprise_identifier_index",
+          "KeySchema": [
+            {
+              "AttributeName": "enterprise_identifier",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "created_at_index",
+          "KeySchema": [
+            {
+              "AttributeName": "created_at",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      },
+      "StreamSpecification": {
+        "StreamEnabled": true,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      }
+    },
+    {
+      "TableName": "itek_insurance_policies",
+      "KeySchema": [
+        {
+          "AttributeName": "policy_id",
+          "KeyType": "HASH"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "policy_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "applicant_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "status",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "created_at",
+          "AttributeType": "N"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "applicant_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "applicant_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "status_index",
+          "KeySchema": [
+            {
+              "AttributeName": "status",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "created_at_index",
+          "KeySchema": [
+            {
+              "AttributeName": "created_at",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      },
+      "StreamSpecification": {
+        "StreamEnabled": true,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      }
+    }
+  ],
+  "shadow_tables": [
+    {
+      "TableName": "itek_login_activity_shadow",
+      "KeySchema": [
+        {
+          "AttributeName": "user_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "login_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "user_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "login_at",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "provider",
+          "AttributeType": "S"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "provider_index",
+          "KeySchema": [
+            {
+              "AttributeName": "provider",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "login_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 5,
+        "WriteCapacityUnits": 5
+      }
+    },
+    {
+      "TableName": "itek_portal_access_shadow",
+      "KeySchema": [
+        {
+          "AttributeName": "email_id",
+          "KeyType": "HASH"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "email_id",
+          "AttributeType": "S"
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 5,
+        "WriteCapacityUnits": 5
+      }
+    },
+    {
+      "TableName": "itek_policy_audit_shadow",
+      "KeySchema": [
+        {
+          "AttributeName": "audit_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at",
+          "KeyType": "RANGE"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "audit_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "created_at",
+          "AttributeType": "N"
+        },
+        {
+          "AttributeName": "session_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "correlation_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "policy_type",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "request_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "entity_id",
+          "AttributeType": "S"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "session_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "session_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "correlation_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "correlation_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "policy_type_index",
+          "KeySchema": [
+            {
+              "AttributeName": "policy_type",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "request_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "request_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "entity_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "entity_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      }
+    },
+    {
+      "TableName": "itek_applicants_shadow",
+      "KeySchema": [
+        {
+          "AttributeName": "applicant_id",
+          "KeyType": "HASH"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "applicant_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "policy_type",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "enterprise_identifier",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "created_at",
+          "AttributeType": "N"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "policy_type_index",
+          "KeySchema": [
+            {
+              "AttributeName": "policy_type",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "enterprise_identifier_index",
+          "KeySchema": [
+            {
+              "AttributeName": "enterprise_identifier",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "created_at_index",
+          "KeySchema": [
+            {
+              "AttributeName": "created_at",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      },
+      "StreamSpecification": {
+        "StreamEnabled": true,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      }
+    },
+    {
+      "TableName": "itek_insurance_policies_shadow",
+      "KeySchema": [
+        {
+          "AttributeName": "policy_id",
+          "KeyType": "HASH"
+        }
+      ],
+      "AttributeDefinitions": [
+        {
+          "AttributeName": "policy_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "applicant_id",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "status",
+          "AttributeType": "S"
+        },
+        {
+          "AttributeName": "created_at",
+          "AttributeType": "N"
+        }
+      ],
+      "GlobalSecondaryIndexes": [
+        {
+          "IndexName": "applicant_id_index",
+          "KeySchema": [
+            {
+              "AttributeName": "applicant_id",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "status_index",
+          "KeySchema": [
+            {
+              "AttributeName": "status",
+              "KeyType": "HASH"
+            },
+            {
+              "AttributeName": "created_at",
+              "KeyType": "RANGE"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        },
+        {
+          "IndexName": "created_at_index",
+          "KeySchema": [
+            {
+              "AttributeName": "created_at",
+              "KeyType": "HASH"
+            }
+          ],
+          "Projection": {
+            "ProjectionType": "ALL"
+          },
+          "ProvisionedThroughput": {
+            "ReadCapacityUnits": 5,
+            "WriteCapacityUnits": 5
+          }
+        }
+      ],
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      },
+      "StreamSpecification": {
+        "StreamEnabled": true,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      }
+    }
+  ]
+}

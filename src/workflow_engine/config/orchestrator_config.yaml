@@ -1,0 +1,46 @@
+workflow:
+  name: "Insuretek Underwriting Workflow"
+
+  steps:
+
+    # ── Applicant ──────────────────────────────────────────────────────────────
+
+    - id: create_applicant
+      label: "create_applicant"
+      category: "Applicant"
+      agent: underwriting_agent
+      eval_type: create
+      prompt: |
+        Create a new insurance applicant using create_applicant tool.
+        Use this comprehensive JSON structure for the applicant_json parameter:
+        {{ applicant_json }}
+        Call the tool and tell me the applicant_id that was assigned.
+      extract_state:
+        applicant_id: uuid
+
+    # ── Policy ────────────────────────────────────────────────────────────────
+
+    - id: create_policy
+      label: "create_policy"
+      category: "Policy"
+      agent: underwriting_agent
+      eval_type: create
+      skip_if_missing: [applicant_id]
+      data_file: ../data/mock_data/policy_data.json
+      prompt: |
+        Create an insurance policy for applicant '{{ applicant_id }}' using the create_policy tool.
+        Use exactly these parameters:
+        {{ policy_data }}
+        Return the policy_id that was assigned.
+      extract_state:
+        policy_id: pol_pattern
+
+    # ── Bind ──────────────────────────────────────────────────────────────────
+
+    - id: bind_policy
+      label: "bind_policy"
+      category: "Bind"
+      agent: underwriting_agent
+      eval_type: update
+      skip_if_missing: [applicant_id, policy_id]
+      prompt: "Bind the policy for applicant '{{ applicant_id }}' with policy_id '{{ policy_id }}' using the bind_policy tool. Return confirmation that the policy was bound."

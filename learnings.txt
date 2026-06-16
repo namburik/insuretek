@@ -1,0 +1,4 @@
+Root cause: create_sme_agent had no tool_limiter, so the agent loop could run up to max_steps: 8 / 2 = 4 tool calls. _ONE_TOOL in the prompt only prevents same-turn parallel calls — the model still runs a fresh LLM turn after each tool result and chose to call kg_explain_merchant in that second turn.
+
+Fix: ToolCallLimitMiddleware(run_limit=1, exit_behavior="end") enforces a hard single-tool ceiling structurally — same pattern already used by boarding, hierarchy, and workflow agents. After kg_query_similar returns, the limiter stops the loop before the model can issue a second tool call.
+

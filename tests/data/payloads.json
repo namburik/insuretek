@@ -1,0 +1,53 @@
+http://127.0.0.1:5000/workflow/submit/91a87d5e-97f4-4754-a3c8-8d816f3d99d6
+{
+  "business_name": "Acme Retail Ltd",
+  "business_type": "ecommerce",
+  "country": "US",
+  "annual_revenue": 500000,
+  "years_in_business": 3,
+  "owner_name": "Jane Doe",
+  "tax_id": "12-3456789",
+  "bank_account": "****4321",
+  "industry": "retail",
+  "monthly_transaction_volume": 60010
+}
+/
+{
+    "workflow_id": "wf_ed1e18321a04",
+    "merchant_id": "91a87d5e-97f4-4754-a3c8-8d816f3d99d6",
+    "status": "AWAITING_WEBHOOKS"
+}
+
+
+  {
+    "reference_id": "ref_identity_6d019b17",
+    "approved": true,
+    "status": "APPROVED",
+    "provider": "kyc_provider",
+    "verified_name": "Jane Doe",
+    "match_score": 0.98
+  }
+{
+    "workflow_id": "wf_ed1e18321a04",
+    "workflow_state": "PARTIALLY_APPROVED"
+} 
+
+{
+  "reference_id": "ref_bank_verification_b40d84e3",
+  "approved": true,
+  "status": "APPROVED",
+  "bank_name": "Chase",
+  "account_validated": true
+}
+{
+    "workflow_id": "wf_ed1e18321a04",
+    "workflow_state": "PARTIALLY_APPROVED"
+}
+
+{
+  "reference_id": "ref_underwriting_40b7fe76",
+  "approved": true,
+  "status": "APPROVED",
+  "credit_score": 720,
+  "recommendation": "approve"
+}
