@@ -29,8 +29,8 @@ if [ "$LOGNAME" = "ec2-user" ]; then
 else
   # ── Local dev ──────────────────────────────────────────────────────
   # Web + APIs on :6001  →  open http://localhost:6001
-  cd /Users/namburi/work_poc/4-insuretek
-  export PYTHONPATH=/Users/namburi/work_poc/4-insuretek/src
+  cd /Users/namburi/work_poc/5-insuretek
+  export PYTHONPATH=/Users/namburi/work_poc/5-insuretek/src
 
   echo "Building React UI..."
   cd src/web_gateway/react && npm ci --silent && npm run build && cd ../../..
