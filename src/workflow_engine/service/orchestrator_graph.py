@@ -22,7 +22,7 @@ from mltek.common.infra import extract_state_value
 from mltek.common.log import setup_structured_logging
 from insuretek.config.config import InsureTekConfig
 from mltek.common.orchestration.workflow_orchestrator import (
-    _PATTERNS, _load_workflow, _render,
+    _load_workflow, _render, _PATTERNS,
     _STATUS_FAIL, _STATUS_PASS, _STATUS_SKIP,
 )
 

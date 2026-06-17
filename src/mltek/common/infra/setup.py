@@ -196,14 +196,6 @@ def extract_result_content(result, dominant: str = "ai") -> str:
     return str(result)
 
 
-_EXTRACT_STATE_PATTERNS = {
-    "uuid":           r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
-    "pol_pattern":    r"pol_[0-9a-f]{16}",
-    "price_pattern":  r"price_[0-9a-fA-F]{16}",
-    "client_pattern": r"client_[0-9a-fA-F]{16}",
-}
-
-
 def extract_json_from_text(text: str) -> dict | None:
     """Find the first JSON object in a free-form text string."""
     if not isinstance(text, str):
@@ -303,10 +295,15 @@ def repair_truncated_json(text: str) -> str:
 
 
 def extract_state_value(text: str, spec: str | dict) -> str | None:
-    """Extract a value from text using a named pattern, regex, or JSON key."""
+    """Extract a value from text using a regex pattern or JSON key.
+
+    Args:
+        text: Text to extract from
+        spec: Either a regex pattern string or a dict with 'regex' or 'json_key' key
+    """
     if isinstance(spec, str):
-        pattern = _EXTRACT_STATE_PATTERNS.get(spec, spec)
-        m = re.search(pattern, str(text), re.IGNORECASE)
+        # Treat string spec as a raw regex pattern
+        m = re.search(spec, str(text), re.IGNORECASE)
         if not m:
             return None
         return m.group(1) if m.lastindex else m.group(0)

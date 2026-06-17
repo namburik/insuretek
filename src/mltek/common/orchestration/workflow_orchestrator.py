@@ -36,6 +36,7 @@ _STATUS_PASS = "PASS"
 _STATUS_FAIL = "FAIL"
 _STATUS_SKIP = "SKIP"
 
+# Domain-specific extraction patterns — workflows may override these
 _PATTERNS = {
     "uuid":           r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
     "price_pattern":  r"price_[0-9a-fA-F]{16}",
