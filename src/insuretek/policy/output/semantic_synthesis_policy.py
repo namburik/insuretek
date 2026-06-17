@@ -30,7 +30,7 @@ def _parse_isar_version(isar_text: str) -> str:
 
 def _build_registries() -> tuple[dict[str, str], dict[str, str], str]:
     """Return (narrative_registry, evidence_registry, isar_version)."""
-    from mltek.common.agents.prompts import ISAR_SYSTEM_PROMPT
+    from insuretek.common.agents.prompts import ISAR_SYSTEM_PROMPT
     isar_ref = _load_isar_reference()
     narrative_prompt = ISAR_SYSTEM_PROMPT.format(isar_reference=isar_ref)
     evidence_prompt = narrative_prompt + "\n\nEXTRACT EVIDENCE CHAIN ONLY — do not write narrative prose."
