@@ -235,6 +235,3 @@ async def strands_mcp_tools():
         if "running" in str(e):
             return await mcp_client.load_tools()
         raise
-
-
-        )
