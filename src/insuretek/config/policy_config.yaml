@@ -53,7 +53,7 @@ guardian:
   domain_id_patterns:
     - [applicant_id, 'applicant_id\s*[:\-]\s*applicant_([a-zA-Z]+)']
   # Name field detection pattern — customize by domain
-  name_field_pattern: '[\"'\'']?\b(applicant_name|name)\b[\"'\'']?\s*[:\-]\s*\S|\b(applicant name|named?)\s+[A-Za-z]'
+  name_field_pattern: "[\"']?\\b(applicant_name|name)\\b[\"']?\\s*[:\\-]\\s*\\S|\\b(applicant name|named?)\\s+[A-Za-z]"
 
 # Reflection
 reflection:
