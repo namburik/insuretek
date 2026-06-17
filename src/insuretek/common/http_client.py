@@ -2,7 +2,7 @@
 
 import httpx
 
-from mltek.config import config
+from insuretek.config.config import InsureTekConfig
 from mltek.common.log import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
@@ -10,7 +10,7 @@ logger = setup_structured_logging(__name__)
 
 async def submit_workflow_request(draft: dict, prompt: str, env: str = "prod", session_id: str = "", correlation_id: str = "") -> tuple[str, str | None]:
     """POST /workflow/applicant. Returns (request_id, applicant_id | None)."""
-    base_url = config.BFF_SERVICE_URL
+    base_url = InsureTekConfig.BFF_SERVICE_URL
     if not base_url:
         raise RuntimeError("BFF_SERVICE_URL must be configured")
     url = f"{base_url.rstrip('/')}/workflow/applicant"

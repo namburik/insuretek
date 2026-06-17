@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import httpx
 
-from mltek.config import config as app_config
+from insuretek.config.config import InsureTekConfig
 from mltek.common.log import setup_structured_logging
 from workflow_engine.domain.workflow_domain import generate_gate_check_ref_id
 
@@ -23,7 +23,7 @@ async def dispatch_gate_check(
     timeout: float = 10.0,
 ) -> None:
     """POST a gate-check request to the external provider."""
-    callback_url = f"{app_config.BFF_SERVICE_URL}/webhooks/{gate_check}"
+    callback_url = f"{InsureTekConfig.BFF_SERVICE_URL}/webhooks/{gate_check}"
     body = {
         **payload,
         "reference_id": ref_id,

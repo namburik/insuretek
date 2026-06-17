@@ -8,6 +8,7 @@ from starlette.routing import Route
 from mltek.common.log import setup_structured_logging
 from mltek.common.starlette_app import serve_html_no_cache
 from mltek.config import config
+from insuretek.config.config import InsureTekConfig
 from core_data.repositories.login_activity_repository import LoginActivityRepository
 from core_data.repositories.portal_access_repository import PortalAccessRepository
 from web_gateway.routes.helpers import extract_json_body, get_client_info
@@ -48,10 +49,10 @@ _CALLBACK_HTML = Path(__file__).parent.parent / "static" / "auth" / "callback.ht
 
 serve_auth_callback = serve_html_no_cache(_CALLBACK_HTML)
 
-GITHUB_CLIENT_ID = config.GITHUB_CLIENT_ID
-GITHUB_CLIENT_SECRET = config.GITHUB_CLIENT_SECRET
-LINKEDIN_CLIENT_ID = config.LINKEDIN_CLIENT_ID
-LINKEDIN_CLIENT_SECRET = config.LINKEDIN_CLIENT_SECRET
+GITHUB_CLIENT_ID = InsureTekConfig.GITHUB_CLIENT_ID
+GITHUB_CLIENT_SECRET = InsureTekConfig.GITHUB_CLIENT_SECRET
+LINKEDIN_CLIENT_ID = InsureTekConfig.LINKEDIN_CLIENT_ID
+LINKEDIN_CLIENT_SECRET = InsureTekConfig.LINKEDIN_CLIENT_SECRET
 
 
 async def auth_config(request: Request) -> JSONResponse:

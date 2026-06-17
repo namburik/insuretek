@@ -16,6 +16,7 @@ from mltek.common.agents.bridge import (
 from mltek.policy.metrics.evaluation import eval_step
 from mltek.common.infra import extract_state_value
 from mltek.common.log import setup_structured_logging
+from insuretek.config.config import InsureTekConfig
 from workflow_engine.service.workflow_orchestrator import (
     _DEFAULT_WORKFLOW, _PATTERNS, _load_workflow, _render,
     _STATUS_FAIL, _STATUS_PASS, _STATUS_SKIP,
@@ -129,8 +130,7 @@ def _make_step_node(
                     await asyncio.to_thread(job_repo.mark_hitl_pending, request_id, step_id, label, str(exc), orch_state=current_state)
                 except Exception:
                     logger.warning("mark_hitl_pending failed step=%r", step_id, exc_info=True)
-            from mltek.config import config as app_config
-            _base = f"{app_config.BFF_SERVICE_URL}/webhooks/orchestrator/{request_id}/resume"
+            _base = f"{InsureTekConfig.BFF_SERVICE_URL}/webhooks/orchestrator/{request_id}/resume"
             logger.warning("HITL suspended step=%r request_id=%s retry_url=%s skip_url=%s", step_id, request_id, f"{_base}?decision=retry", f"{_base}?decision=skip")
             hitl = interrupt({"step_id": step_id, "label": label, "error": str(exc)})
             decision = (hitl or {}).get("decision", "retry")

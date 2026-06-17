@@ -270,8 +270,8 @@ async def run_applicant_orchestrator_graph(
             step_id = (failed_step or {}).get("label") or (failed_step or {}).get("step_id") or "unknown"
             error   = (failed_step or {}).get("note") or "step failed"
             await asyncio.to_thread(job_repo.mark_hitl_pending, request_id, step_id, step_id, error)
-            from mltek.config import config as app_config
-            resume_url = f"{app_config.BFF_SERVICE_URL}/webhooks/orchestrator/{request_id}/resume?decision=retry"
+            from insuretek.config.config import InsureTekConfig
+            resume_url = f"{InsureTekConfig.BFF_SERVICE_URL}/webhooks/orchestrator/{request_id}/resume?decision=retry"
             logger.warning("OrchestratorGraph FAIL → hitl_pending request_id=%s step=%s resume_url=%s", request_id, step_id, resume_url)
         else:
             await asyncio.to_thread(

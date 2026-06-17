@@ -72,10 +72,6 @@ class Config:
     NEO4J_PORT: int = int(os.getenv("NEO4J_PORT", "7687"))
     NEO4J_USER: str = os.getenv("NEO4J_USER", "neo4j")
     NEO4J_PASSWORD: str = os.getenv("NEO4J_PASSWORD", "neo4jneo4j")
-    NEO4J_DATABASE: str = os.getenv("NEO4J_DATABASE", "mltek")
-    
-    # Workflow API endpoint used by intake and gate-check callbacks.
-    BFF_SERVICE_URL: str = os.getenv("BFF_SERVICE_URL", "http://127.0.0.1:6001")
 
     # Guardian configuration
     GUARDIAN_ENABLED: bool = os.getenv("GUARDIAN_ENABLED", "false").lower() == "true"
@@ -85,12 +81,6 @@ class Config:
 
     # OrchestratorGraph — LangGraph-based orchestrator with checkpointing and HITL
     USE_ORCHESTRATOR_GRAPH: bool = os.getenv("USE_ORCHESTRATOR_GRAPH", "true").lower() == "true"
-
-    # OAuth / Auth provider configuration
-    GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID", "")
-    GITHUB_CLIENT_SECRET: str = os.getenv("GITHUB_CLIENT_SECRET", "")
-    LINKEDIN_CLIENT_ID: str = os.getenv("LINKEDIN_CLIENT_ID", "")
-    LINKEDIN_CLIENT_SECRET: str = os.getenv("LINKEDIN_CLIENT_SECRET", "")
 
     # MCP Server Configuration
     SERVER_HOST: str = os.getenv("SERVER_HOST", "127.0.0.1")
@@ -304,7 +294,7 @@ class Config:
             "uri": uri,
             "user": cls.NEO4J_USER,
             "password": cls.NEO4J_PASSWORD,
-            "database": cls.NEO4J_DATABASE
+            "database": os.getenv("NEO4J_DATABASE", "neo4j")
         }
 
     @classmethod
