@@ -334,7 +334,14 @@ class AgentExecutor:
 
         msg_lower = message.lower()
         if not KEYWORD_ROUTES:
-            logger.warning("Keyword routes not initialized — domain provider may not be registered")
+            logger.warning("Keyword routes not initialized — initializing now")
+            # Ensure domain provider is registered before routing
+            if _domain_provider is None:
+                try:
+                    from insuretek.policy.domain_provider import InsureTekDomainProvider
+                    register_domain_provider(InsureTekDomainProvider())
+                except Exception as e:
+                    logger.error("Failed to auto-register domain provider: %s", e)
         for pattern, agent_id in KEYWORD_ROUTES:
             if agent_id in valid_ids and re.search(pattern, msg_lower):
                 logger.info("Keyword router → %s (pattern=%s)", agent_id, pattern)
