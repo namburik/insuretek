@@ -1,4 +1,8 @@
-"""LangGraph StateGraph wrapper around applicant orchestrator with checkpointing and HITL."""
+"""LangGraph StateGraph wrapper around workflow orchestrator with checkpointing and HITL.
+
+Domain-specific integration: requires checkpointer, BFF_SERVICE_URL, and critical_state_key
+provided by the domain application (e.g., ApplicantWorkflowSaver, InsureTekConfig, "applicant_id").
+"""
 
 from __future__ import annotations
 
@@ -287,7 +291,7 @@ class OrchestratorGraph:
         job_repo=None,
     ) -> None:
         if workflow_path is None:
-            workflow_path = _DEFAULT_WORKFLOW
+            workflow_path = Path(__file__).resolve().parents[1] / "config" / "orchestrator_config.yaml"
         workflow_path = Path(workflow_path)
         raw = _load_workflow(workflow_path)
         wf = raw.get("workflow", raw)
