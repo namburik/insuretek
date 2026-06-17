@@ -333,6 +333,8 @@ class AgentExecutor:
         valid_ids = {n["id"] for n in self._nodes_cfg}
 
         msg_lower = message.lower()
+        if not KEYWORD_ROUTES:
+            logger.warning("Keyword routes not initialized — domain provider may not be registered")
         for pattern, agent_id in KEYWORD_ROUTES:
             if agent_id in valid_ids and re.search(pattern, msg_lower):
                 logger.info("Keyword router → %s (pattern=%s)", agent_id, pattern)
@@ -345,6 +347,9 @@ class AgentExecutor:
 
         agent_list = "\n".join(f'- {n["id"]}: {n.get("description", "")}' for n in self._nodes_cfg)
         system = INTENT_RESOLVER_SYSTEM.format(agent_list=agent_list)
+        if not system:
+            logger.warning("Intent resolver system prompt is empty — domain config not loaded properly")
+        logger.debug("Intent resolver: message='%s' system_prompt_len=%d", message[:200], len(system))
         try:
             from mltek.config import config as _cfg
             resolution = await call_structured_agent(
