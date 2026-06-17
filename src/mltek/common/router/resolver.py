@@ -711,6 +711,8 @@ async def call_resolver(prompt: str, resolver_config: dict = None, agent_map: di
         if resolver_config is None and agent_map is None:
             executor = await _get_cached_executor(env)
         else:
+            if resolver_config is None:
+                resolver_config = load_resolver_config()
             if agent_map is None:
                 agent_map = await get_cached_agent_map(env=env)
             executor = AgentExecutor(resolver_config, agent_map)
