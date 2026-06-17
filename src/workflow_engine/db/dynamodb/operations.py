@@ -273,13 +273,16 @@ def update_job_applicant_id(request_id: str, applicant_id: str) -> None:
 
 
 def mark_job_done(request_id: str, applicant_id: Optional[str], result: str, steps: list) -> None:
+    import json
+    # Serialize steps to JSON string to avoid DynamoDB type issues with nested structures
+    steps_json = json.dumps(steps, default=str) if steps else "[]"
     workflow_request_table.update_item(
         {"request_id": request_id},
         {
             "status":       "done",
             "applicant_id": applicant_id,
             "result":       result,
-            "steps":       steps,
+            "steps":       steps_json,
             "updated_at":  iso_now(),
         },
     )
