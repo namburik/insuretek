@@ -24,7 +24,7 @@ reflection:
 graph:
   name: applicant_management_langgraph
   routing_mode: intent
-  default_route: applicant_agent
+  default_route: sme_agent
   agent_timeout: 300
 
   nodes:
