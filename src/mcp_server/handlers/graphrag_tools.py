@@ -2,8 +2,8 @@
 
 from core_data.service.graph_service import GraphService
 from core_data.db.graph.neo4j_client import get_neo4j_client
-from shared.common.log.logging_config import setup_structured_logging
-from shared.common.infra.error_helpers import handle_tool_errors as _handle_tool_errors
+from mltek.common.log.logging_config import setup_structured_logging
+from mltek.common.infra.error_helpers import handle_tool_errors as _handle_tool_errors
 
 logger = setup_structured_logging(__name__)
 

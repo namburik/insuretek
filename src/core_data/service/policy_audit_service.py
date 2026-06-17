@@ -17,8 +17,8 @@ from typing import Any, Dict, List, Optional
 
 from core_data.db.models.models_policy_audit import PolicyAuditRecord
 from core_data.repositories.policy_audit_repository import PolicyAuditRepository
-from shared.common.infra.error_helpers import handle_repo_errors
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.common.infra.error_helpers import handle_repo_errors
+from mltek.common.log.logging_config import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

@@ -28,16 +28,21 @@ import asyncio
 
 from mcp.server.lowlevel import Server
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
-from shared.common.starlette_app import StreamableStarletteApp, run_starlette_app
+from mltek.common.starlette_app import StreamableStarletteApp, run_starlette_app
 
-from shared.config.config_common import Config
-from shared.common.infra.context import set_env, get_env
-from shared.common.infra.error_helpers import handle_mcp_tool_errors
+from mltek.config.config_common import Config
+from mltek.common.infra.context import set_app_name, set_env, get_env
+from mltek.common.router.resolver import register_domain_provider
+from insuretek.policy.domain_provider import InsureTekDomainProvider
+
+set_app_name("insuretek")
+register_domain_provider(InsureTekDomainProvider())
+from mltek.common.infra.error_helpers import handle_mcp_tool_errors
 from core_data.service import  ApplicantService
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.common.log.logging_config import setup_structured_logging
 from mcp_server.utilities.tools_schemas import get_tool_schema, get_tool_description
 from mcp_server.utilities.constants import InsurtekTools
-from shared.common.tools.format import format_tool_result
+from mltek.common.tools.format import format_tool_result
 from mcp_server.handlers.graphrag_tools import GraphRAGHandlers
 from mcp_server.handlers.applicant_tools import ApplicantHandlers
 from mcp_server.handlers.policy_tools import PolicyHandlers
@@ -97,7 +102,7 @@ class EnvMiddleware:
             finally:
                 from contextvars import Token
                 if isinstance(token, Token):
-                    from shared.common.infra.context import _env_var
+                    from mltek.common.infra.context import _env_var
                     _env_var.reset(token)
         else:
             await self._app(scope, receive, send)

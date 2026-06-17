@@ -9,8 +9,8 @@ from core_data.domain.constants import ENTERPRISE_IDENTIFIER_DEFAULT
 from core_data.domain.model_applicant import ApplicantData, CoverageRequest, RiskProfile, LocationAddress, ContactInfo
 from core_data.db.models.models_applicant import Applicant, InsurancePolicy
 from core_data.repositories.applicant_repository import ApplicantRepository, PolicyRepository
-from shared.common.infra.setup import deep_merge
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.common.infra.setup import deep_merge
+from mltek.common.log.logging_config import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

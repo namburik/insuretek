@@ -19,15 +19,15 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import AsyncIterator, Literal
 
-from shared.common.agents.bridge import AIMessage, HumanMessage, SystemMessage
+from mltek.common.agents.bridge import AIMessage, HumanMessage, SystemMessage
 
-from shared.common.agents.lang_agents import call_chat_agent, get_chat_llm, parse_llm_json
-from shared.common.infra.context import with_token_phase, set_active_agent
-from shared.common.log import setup_structured_logging
-from shared.common.infra.setup import deep_merge
-from shared.common.infra.vendor import normalize_stream_chunk
+from mltek.common.agents.lang_agents import call_chat_agent, get_chat_llm, parse_llm_json
+from mltek.common.infra.context import with_token_phase, set_active_agent
+from mltek.common.log import setup_structured_logging
+from mltek.common.infra.setup import deep_merge
+from mltek.common.infra.vendor import normalize_stream_chunk
 from bff_service.prompts import INTAKE_REQUIRED_LABELS
-from shared.config import config
+from mltek.config import config
 from core_data.domain.enums import PolicyType
 from bff_service.schema import ExtractionResult, IntakeSession
 from bff_service.prompts import extraction_system_prompt, reply_system_prompt

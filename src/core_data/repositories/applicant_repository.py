@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr
 
-from shared.config.config_common import Config
-from shared.common.infra.error_helpers import handle_repo_errors
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.config.config_common import Config
+from mltek.common.infra.error_helpers import handle_repo_errors
+from mltek.common.log.logging_config import setup_structured_logging
 from core_data.repositories.base_repository import BaseRepository
 from core_data.db.models.models_applicant import Applicant, InsurancePolicy
 from core_data.db.factory import get_applicants_table_operations, get_policies_table_operations

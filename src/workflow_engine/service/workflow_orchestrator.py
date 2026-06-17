@@ -26,9 +26,9 @@ import json
 import re
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal
-from shared.common.infra import load_config, extract_state_value
-from shared.common.log import setup_structured_logging
-from shared.policy.metrics.evaluation import eval_step, quality_label
+from mltek.common.infra import load_config, extract_state_value
+from mltek.common.log import setup_structured_logging
+from mltek.policy.metrics.evaluation import eval_step, quality_label
 
 logger = setup_structured_logging(__name__)
 
@@ -106,10 +106,10 @@ class WorkflowOrchestrator:
 
     async def run(self, request_id: str | None = None, session_id: str | None = None, correlation_id: str | None = None) -> bool:
         """Execute all steps in order. Returns True when no step failed."""
-        from shared.common.router.resolver import call_resolver
-        from shared.common.infra import extract_result_content
-        from shared.config import config as common_config
-        from shared.common.infra.context import set_jit_session, set_request_id, set_audit_session_id, CorrelationContext
+        from mltek.common.router.resolver import call_resolver
+        from mltek.common.infra import extract_result_content
+        from mltek.config import config as common_config
+        from mltek.common.infra.context import set_jit_session, set_request_id, set_audit_session_id, CorrelationContext
         set_jit_session("done", self.name)
         if request_id:
             set_request_id(request_id)

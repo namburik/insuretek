@@ -19,7 +19,7 @@ from .model_applicant import (
     LocationAddress,
     ContactInfo,
 )
-from shared.config.config_common import Config, config
+from mltek.config.config_common import Config, config
 
 __all__ = [
     # Enums

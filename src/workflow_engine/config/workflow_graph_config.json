@@ -1,5 +1,5 @@
 {
-  "workflow": "applicant_underwriting",
+  "graph": "applicant_underwriting",
   "nodes": [
     { "name": "initiate",           "handler": "initiate"           },
     { "name": "await_webhook",      "handler": "await_webhook"      },

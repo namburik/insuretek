@@ -5,9 +5,9 @@ import threading
 from typing import List, Dict, Any
 from neo4j import GraphDatabase, exceptions as neo4j_exceptions
 
-from shared.config.config_common import Config
-from shared.common.log.logging_config import setup_structured_logging
-from shared.common.infra.error_helpers import best_effort
+from mltek.config.config_common import Config
+from mltek.common.log.logging_config import setup_structured_logging
+from mltek.common.infra.error_helpers import best_effort
 
 logger = setup_structured_logging(__name__)
 

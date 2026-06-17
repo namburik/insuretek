@@ -11,14 +11,14 @@ import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from shared.common.agents.bridge import AIMessage
+from mltek.common.agents.bridge import AIMessage
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from shared.common.agents.guardian import GuardianAgent, GuardianDecision
+from mltek.common.agents.guardian import GuardianAgent, GuardianDecision
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

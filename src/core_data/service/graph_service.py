@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple, Any
 from pathlib import Path
 
-from shared.common.log import setup_structured_logging
+from mltek.common.log import setup_structured_logging
 from core_data.db.graph.neo4j_client import get_neo4j_client
 from core_data.db.graph.graph_operations import get_graph_operations
 
@@ -668,7 +668,7 @@ class GraphService:
             try:
                 applicant = applicant_service.get_by_id(applicant_id)
                 if applicant:
-                    from shared.common.tools.format import format_json_as_text
+                    from mltek.common.tools.format import format_json_as_text
                     data = applicant.model_dump(mode="json", exclude_none=True) if hasattr(applicant, "model_dump") else {}
                     if policy_service is not None:
                         try:

@@ -4,9 +4,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
-from shared.common.log import setup_structured_logging
-from shared.common.starlette_app import serve_html_no_cache
-from shared.config import config
+from mltek.common.log import setup_structured_logging
+from mltek.common.starlette_app import serve_html_no_cache
+from mltek.config import config
 from bff_service.endpoints import generate_intake_stream, get_intake_message_response
 from web_gateway.routes.helpers import extract_json_body, validate_intake_request
 

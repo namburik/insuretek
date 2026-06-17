@@ -7,9 +7,9 @@ from langchain_core.messages import ToolMessage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from shared.common.infra.context import set_env, set_jit_session
-from shared.policy.jit_elevation_policy import JitElevationPolicy
-from shared.common.agents.jit_middleware import JitPrivilegeMiddleware
+from mltek.common.infra.context import set_env, set_jit_session
+from mltek.policy.jit_elevation_policy import JitElevationPolicy
+from mltek.common.agents.jit_middleware import JitPrivilegeMiddleware
 
 def _make_request(name, args={}):
     r = MagicMock()

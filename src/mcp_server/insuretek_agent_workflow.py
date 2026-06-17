@@ -4,12 +4,18 @@ from typing import Sequence
 
 from mcp.server.lowlevel import Server
 from mcp.types import Tool, TextContent, EmbeddedResource
-from shared.common.starlette_app import StreamableStarletteApp, run_starlette_app
+from mltek.common.starlette_app import StreamableStarletteApp, run_starlette_app
 
-from shared.config.config_common import Config
-from shared.common.log.logging_config import setup_structured_logging
-from shared.common.infra.error_helpers import handle_mcp_tool_errors
-from shared.common.tools.format import format_tool_result
+from mltek.config.config_common import Config
+from mltek.common.infra.context import set_app_name
+from mltek.common.router.resolver import register_domain_provider
+from mltek.common.log.logging_config import setup_structured_logging
+from insuretek.policy.domain_provider import InsureTekDomainProvider
+
+set_app_name("insuretek")
+register_domain_provider(InsureTekDomainProvider())
+from mltek.common.infra.error_helpers import handle_mcp_tool_errors
+from mltek.common.tools.format import format_tool_result
 from mcp_server.utilities.transform import require_arg, unwrap_object_argument
 from mcp_server.utilities.constants import WorkflowMcpTools
 from mcp_server.utilities.tools_schemas import get_tool_description, get_tool_schema

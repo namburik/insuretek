@@ -1,4 +1,4 @@
-from shared.common.tools.format import normalize_tool_response_text
+from mltek.common.tools.format import normalize_tool_response_text
 
 
 def test_normalize_strips_google_labelled_wrapper():
@@ -61,7 +61,7 @@ text:
 
 
 def test_extract_result_content_prefers_assistant_message_and_strips_google_wrapper():
-    from shared.common.infra.setup import extract_result_content
+    from mltek.common.infra.setup import extract_result_content
 
     result = {
         "messages": [

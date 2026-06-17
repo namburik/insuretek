@@ -9,10 +9,10 @@ import json as _json
 import uuid
 from typing import AsyncIterator
 
-from shared.common.infra.context import CorrelationContext, set_jit_session, set_request_id
-from shared.common.router.resolver import record_stream_tokens
-from shared.common.log import setup_structured_logging
-from shared.common.tools.format import normalize_tool_response_text
+from mltek.common.infra.context import CorrelationContext, set_jit_session, set_request_id
+from mltek.common.router.resolver import record_stream_tokens
+from mltek.common.log import setup_structured_logging
+from mltek.common.tools.format import normalize_tool_response_text
 from bff_service.session import get_or_create_session, process_turn, stream_reply
 from bff_service.prompt_validation_policy import PromptValidationPolicy
 

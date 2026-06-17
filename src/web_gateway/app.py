@@ -4,9 +4,15 @@ from starlette.requests import Request
 from starlette.responses import FileResponse
 from starlette.routing import Mount, Route
 
-from shared.common.starlette_app import CorrelationMiddleware, NoCacheStaticFiles, create_starlette_app, run_starlette_app
-from shared.common.log import setup_structured_logging
-from shared.config import config
+from mltek.common.infra.context import set_app_name
+from mltek.common.router.resolver import register_domain_provider
+from mltek.common.starlette_app import CorrelationMiddleware, NoCacheStaticFiles, create_starlette_app, run_starlette_app
+from mltek.common.log import setup_structured_logging
+from mltek.config import config
+from insuretek.policy.domain_provider import InsureTekDomainProvider
+
+set_app_name("insuretek")
+register_domain_provider(InsureTekDomainProvider())
 from web_gateway.routes.intake_routes import INTAKE_ROUTES
 from web_gateway.routes.workflow_routes import WORKFLOW_ROUTES
 from web_gateway.routes.auth_routes import AUTH_ROUTES

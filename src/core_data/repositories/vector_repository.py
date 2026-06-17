@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from shared.common.log import setup_structured_logging
+from mltek.common.log import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

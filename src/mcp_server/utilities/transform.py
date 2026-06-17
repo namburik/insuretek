@@ -1,6 +1,6 @@
 """MCP tool argument utilities."""
 
-from shared.common.log import setup_structured_logging
+from mltek.common.log import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

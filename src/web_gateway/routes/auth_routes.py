@@ -5,9 +5,9 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from shared.common.log import setup_structured_logging
-from shared.common.starlette_app import serve_html_no_cache
-from shared.config import config
+from mltek.common.log import setup_structured_logging
+from mltek.common.starlette_app import serve_html_no_cache
+from mltek.config import config
 from core_data.repositories.login_activity_repository import LoginActivityRepository
 from core_data.repositories.portal_access_repository import PortalAccessRepository
 from web_gateway.routes.helpers import extract_json_body, get_client_info

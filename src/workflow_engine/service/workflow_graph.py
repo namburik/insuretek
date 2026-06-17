@@ -21,10 +21,10 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from shared.common.agents.bridge import interrupt
-from shared.common.tools.ddb_format import DDBJsonEncoder
+from mltek.common.agents.bridge import interrupt
+from mltek.common.tools.ddb_format import DDBJsonEncoder
 
-from shared.common.agents.graph_builder import GraphBuilder
+from mltek.common.agents.graph_builder import GraphBuilder
 from workflow_engine.repository import WorkflowRepository, get_workflow_checkpointer
 
 from workflow_engine.config import GRAPH_CONFIG_PATH as _GRAPH_CONFIG
@@ -32,10 +32,10 @@ from workflow_engine.config import GRAPH_CONFIG_PATH as _GRAPH_CONFIG
 if not _GRAPH_CONFIG.exists():
     raise FileNotFoundError(f"Workflow graph config not found: {_GRAPH_CONFIG}")
 
-from shared.common.agents.lang_agents import call_structured_agent
-from shared.common.router.resolver import call_resolver
-from shared.common.infra.context import set_jit_session, with_token_phase
-from shared.common.infra import extract_result_content
+from mltek.common.agents.lang_agents import call_structured_agent
+from mltek.common.router.resolver import call_resolver
+from mltek.common.infra.context import set_jit_session, with_token_phase
+from mltek.common.infra import extract_result_content
 from workflow_engine.config import GATE_CHECK_ENDPOINTS
 from workflow_engine.config.prompts import ACTIVATE_APPLICANT_PROMPT, DECISION_SYSTEM, build_decision_prompt
 from workflow_engine.domain.workflow_domain import (
@@ -48,7 +48,7 @@ from workflow_engine.domain.workflow_domain import (
 )
 from workflow_engine.service.gate_check_client import dispatch_gate_check, make_ref_id
 
-from shared.common.log import setup_structured_logging
+from mltek.common.log import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

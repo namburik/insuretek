@@ -3,8 +3,8 @@
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from shared.common.infra.context import CorrelationContext
-from shared.common.log import setup_structured_logging
+from mltek.common.infra.context import CorrelationContext
+from mltek.common.log import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

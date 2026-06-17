@@ -4,15 +4,21 @@ from typing import Sequence
 
 from mcp.server.lowlevel import Server
 from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
-from shared.common.starlette_app import StreamableStarletteApp, run_starlette_app
+from mltek.common.starlette_app import StreamableStarletteApp, run_starlette_app
 
 # Expose src/ so that `dbtek.*` package imports resolve
 from core_data.service.graph_service import GraphService
 from core_data.service.applicant_service import ApplicantService
-from shared.config import config
-from shared.common.log import setup_structured_logging
-from shared.common.infra.error_helpers import handle_mcp_tool_errors
-from shared.common.tools.format import format_text_result, format_tool_result, format_json_as_text
+from mltek.config import config
+from mltek.common.infra.context import set_app_name
+from mltek.common.router.resolver import register_domain_provider
+from mltek.common.log import setup_structured_logging
+from insuretek.policy.domain_provider import InsureTekDomainProvider
+
+set_app_name("insuretek")
+register_domain_provider(InsureTekDomainProvider())
+from mltek.common.infra.error_helpers import handle_mcp_tool_errors
+from mltek.common.tools.format import format_text_result, format_tool_result, format_json_as_text
 from mcp_server.utilities.transform import unwrap_object_argument
 from mcp_server.utilities.constants import MSAgentTools
 from mcp_server.utilities.tools_schemas import get_tool_description, get_tool_schema

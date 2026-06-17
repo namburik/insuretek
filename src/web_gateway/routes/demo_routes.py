@@ -17,10 +17,10 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.routing import Route
 
-from shared.common.infra.context import CorrelationContext
-from shared.common.log import setup_structured_logging
-from shared.common.starlette_app import serve_html_no_cache
-from shared.config import config
+from mltek.common.infra.context import CorrelationContext
+from mltek.common.log import setup_structured_logging
+from mltek.common.starlette_app import serve_html_no_cache
+from mltek.config import config
 from core_data.repositories.login_activity_repository import LoginActivityRepository
 from bff_service.demo_endpoints import generate_demo_stream, get_demo_message_response
 from web_gateway.routes.helpers import extract_json_body, get_client_info

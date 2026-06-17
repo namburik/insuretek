@@ -4,7 +4,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from shared.common.log import setup_structured_logging
+from mltek.common.log import setup_structured_logging
 
 from workflow_engine.repository import ApplicantJobRepository
 from workflow_engine.service.workflow_endpoints import (

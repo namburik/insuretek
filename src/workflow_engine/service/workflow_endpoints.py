@@ -1,7 +1,7 @@
 import asyncio
 
-from shared.common.infra.context import CorrelationContext, set_request_id, set_audit_session_id
-from shared.common.log import setup_structured_logging
+from mltek.common.infra.context import CorrelationContext, set_request_id, set_audit_session_id
+from mltek.common.log import setup_structured_logging
 from workflow_engine.domain.workflow_domain import generate_request_id
 from workflow_engine.repository import ApplicantJobRepository, WorkflowRepository
 from workflow_engine.service.applicant_workflow import (
@@ -142,7 +142,7 @@ async def schedule_mock_gate_check(gate_check: str, payload: dict) -> dict:
 
 
 async def create_workflow_job_request(body: dict, job_repo: ApplicantJobRepository) -> dict:
-    from shared.config import config as app_config
+    from mltek.config import config as app_config
     request_id = generate_request_id()
     set_request_id(request_id)
     session_id = body.get("session_id", "")
@@ -220,7 +220,7 @@ async def resume_orchestrator_step(any_id: str, decision: str, notes: str = "") 
     ``any_id`` may be an orchestrator request_id (UUID), applicant_id, or approval workflow_id.
     ``decision`` must be ``"retry"`` or ``"skip"``.
     """
-    from shared.config import config as app_config
+    from mltek.config import config as app_config
     if not app_config.USE_ORCHESTRATOR_GRAPH:
         return {"error": "OrchestratorGraph not enabled (USE_ORCHESTRATOR_GRAPH=false)"}
 

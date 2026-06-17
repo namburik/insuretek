@@ -1,0 +1,235 @@
+#  Agentic Policy Configuration
+
+# Guardian
+guardian:
+  token_limit: 1000
+  checked_sources: [react]
+  unguarded_agents: [applicant_agent, workflow_agent, sme_agent]
+  bulk_destructive_verbs: [harm, delete, remove, drop, deactivate, purge, wipe, clear, revoke, cancel, terminate, suspend, truncate, erase, destroy, reset, archive, invalidate, flush]
+  bulk_quantifiers: [all, every, bulk]
+  destructive_verbs: [harm, delete, remove, drop, deactivate, purge, revoke, cancel, terminate, suspend, void, erase, destroy, truncate, reset, archive, invalidate, flush]
+  write_verbs: [update, modify, change, set, rotate, edit, disable]
+  scope_keywords:              # domain-specific keywords (Insurance)
+    - applicant
+    - policy
+    - workflow
+    - audit
+    - request
+    - underwriting
+    - status
+    - session
+    - evidence
+    - ISAR
+    - coverage
+    - risk
+    - premium
+    - claim
+    - renewal
+    - quote
+    - bind
+    - deductible
+    - tier
+    - underwrite
+    - account
+    - enterprise
+    - contact
+    - location
+    - job
+    - step
+    - guardian
+    - route
+    - intake
+    - summary
+    - detail
+    - report
+    - insight
+    - distribution
+    - similar
+  name_fields: [applicant_name, name]
+  explicit_id_patterns:
+    - '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    - 'pol_[a-z0-9]{8,}'
+  # Domain-specific ID extraction patterns (field_name, regex_pattern pairs)
+  domain_id_patterns:
+    - [applicant_id, 'applicant_id\s*[:\-]\s*applicant_([a-zA-Z]+)']
+  # Name field detection pattern — customize by domain
+  name_field_pattern: '[\"'\'']?\b(applicant_name|name)\b[\"'\'']?\s*[:\-]\s*\S|\b(applicant name|named?)\s+[A-Za-z]'
+
+# Reflection
+reflection:
+  max_iterations: 3
+  pass_through_on_cannot_correct: true
+  reflection_timeout_secs: 10.0    # wall-clock cap on the full critic+reformulator loop
+
+# LLM Judge
+judge:
+  enabled: true
+  model: null                    # null = default LLM
+
+# Metadata enrichment
+metadata:
+  enabled: true
+  domains: [applicant, underwriting, semantic, workflow]
+
+# Rate limiting
+rate_limit:
+  session_window_secs: 60
+  session_max_calls: 30          # 0 = disabled
+  tenant_window_secs: 60
+  tenant_max_calls: 200          # 0 = disabled
+
+# Prompt injection
+prompt_injection:
+  hard_block_threshold: 1
+  llm_enabled: false             # stage-2 LLM scoring
+  llm_block_threshold: 0.75
+  llm_score_pattern:  'INJECTION_SCORE:\s*([0-9]*\.?[0-9]+)'
+  llm_reason_pattern: 'INJECTION_REASON:\s*(.+)'
+  injection_patterns:
+    - [role_override,        '\b(you are now|act as|pretend (you are|to be)|roleplay as|simulate being)\b']
+    - [instruction_override, '\b(ignore (previous|all|your|prior)|disregard (all|your|previous)|forget (all|everything|your))\b']
+    - [system_leak,          '\b(output (your|the) system prompt|print (your )?instructions|reveal (your )?prompt|show (me )?your (system )?prompt)\b']
+    - [jailbreak_keyword,    '\b(jailbreak|DAN mode|developer mode|unrestricted mode|no restrictions|bypass (safety|filter|guard))\b']
+    - [delimiter_inject,     '(</?( system|user|assistant|human|instruction)>|\[INST\]|\[/INST\]|<\|im_start\|>|<\|im_end\|>)']
+    - [token_smuggle,        '(\\u[0-9a-f]{4}.*){4,}']
+    - [indirect_inject,      '\b(when (you|the AI) (reads?|processes?|sees?)|hidden (instruction|command|directive))\b']
+
+# Caller authorization
+caller_auth:
+  default_role: admin            # fallback role; admin = unrestricted
+  role_agents:
+    read_only: [applicant_agent, sme_agent, workflow_agent]
+    operator:  [applicant_agent, sme_agent, workflow_agent, underwriting_agent]
+    admin: []                    # empty = all agents
+
+# Token budget
+token_budget:
+  max_session_tokens: 50000         # 0 = unlimited
+  portal_max_session_tokens: 10000  # lower cap for portal-ref users in servicing
+  max_request_tokens: 8000          # 0 = unlimited
+  warn_threshold: 0.8
+
+# Sensitive data redaction
+sensitive_redact:
+  mode: scrub                    # scrub | block
+
+# Semantic tool alignment
+semantic_tool:
+  threshold: 0.5
+
+# Live entity hydration (injected as SystemMessage after MetadataEnrichmentPolicy)
+live_hydration:
+  enabled: true
+  max_entities: 3
+  timeout_secs: 5.0
+  cache_ttl_secs: 120
+  domains: [applicant, underwriting, semantic, workflow]
+
+# Routing constraints — (env, agent) pairs blocked by RoutingPolicy.
+# Use "*" as a wildcard for env or agent.
+routing:
+  rules:
+    - env: shadow
+      agent: sme_agent
+      message: "Advanced Queries are not available in shadow mode."
+
+# Router configuration — keyword routes and intent disambiguation
+routing:
+  keyword_routes:
+    - ["\\bisar.?(evidence|chain|conclusion|history)\\b", "sme_agent"]
+    - ["\\b(workflow|job.?status|request.?id|workflow.?id|policy.?audit|audit.?trail|session.?audit)\\b", "workflow_agent"]
+    - ["\\b(create|update|bind|issue|cancel)\\b.*(policy|applicant|quote)", "underwriting_agent"]
+    - ["(list.?applicant|search.?applicant|find.?applicant|quote.?status)", "applicant_agent"]
+    - ["(get.?all.?applicant|applicant.?by.?policy.?type|geographic.?distribution|high.?risk.?applicant|policy.?for.?applicant|retrieve.?quote|get.?quote|fetch.?quote)", "applicant_agent"]
+  intent_resolver_system: |
+    You are a routing agent. Given a user request, select the single most appropriate agent to handle it.
+
+    Available agents:
+    {agent_list}
+
+    DISAMBIGUATION RULES (apply in order — first match wins):
+    - ALWAYS select sme_agent if the request mentions "isar evidence", "evidence chain", "analysis history", or "semantic conclusions" — regardless of any other keywords including "correlation".
+    - Select sme_agent if the request uses explanation or analysis language for a SPECIFIC applicant or enterprise: "explain", "summarize", "analyze", "describe", "tell me about", "what can you tell me", "overview", "insights", "risk", "ISAR", "KG context", "semantic", "risk cluster" — EVEN if an ID (UUID or other) is mentioned.
+    - Select sme_agent if the request asks about a specific applicant attribute requiring semantic translation: "loss history", "credit score", "risk tier", "actuarial", "claims", "coverage gap", "coverage", "deductible", "premium estimate", "underwriting decision", "underwriting gaps", "sanctions", "CLUE report".
+    - ALWAYS select workflow_agent if the request mentions "workflow", "job status", "request_id", "workflow_id", "submitted request", "job", or "check status" — even if an applicant is also mentioned.
+    - ALWAYS select workflow_agent if the request mentions "policy audit", "audit records", "audit trail", "policy decisions", "policy summary", "allowed/denied", "session audit", "correlation audit", or "enterprise issues".
+    - Select underwriting_agent if the request involves creating, updating, binding, issuing, or cancelling a policy or applicant, OR quoting/binding a policy. Do NOT select underwriting_agent for read-only quote queries ("retrieve quote", "get quote", "what is the quote") — those go to applicant_agent.
+    - NEVER select sme_agent for list or filter queries ("list applicants", "which applicants", "applicants with", "show all applicants", "find applicants by policy type") — those always go to applicant_agent regardless of other keywords.
+    - If the request is for searching or querying existing applicant fields → select applicant_agent.
+
+    For sme_agent, set tool_hint to one of:
+      isar_explain_applicant — applicant risk profile, coverage capabilities, premium estimate, ISAR analysis, underwriting decision, churn risk
+      get_isar_evidence      — persisted ISAR semantic conclusions by applicant_id or correlation_id; use for "isar evidence", "evidence chain", "analysis history"
+      kg_explain_applicant   — KG-derived narrative: peer context, risk band relative to peers
+      kg_similar_applicants  — find applicants similar to a given id or search description
+      kg_detect_risk_cluster — fraud ring or risk network around an applicant
+    For all other agents, leave tool_hint empty.
+
+# Agent factory configuration — tool limits and middleware per agent type
+agents:
+  sme:
+    tool_limit: 1
+    exit_behavior: continue
+    middlewares: [semantic_middleware]
+  underwriting:
+    tool_limit: 2
+    exit_behavior: end
+    middlewares: [semantic_middleware, jit_middleware, condenser]
+  applicant:
+    tool_limit: 1
+    exit_behavior: end
+    middlewares: [semantic_middleware]
+  workflow:
+    tool_limit: 2
+    exit_behavior: end
+    middlewares: [semantic_middleware]
+
+# Tool result condensing — which write-tool results to condense
+tool_condenser:
+  create_applicant:
+    extract_fields: [applicant_id]
+    summary_template: "applicant_id: {0} ✓"
+  update_applicant:
+    extract_fields: [applicant_id]
+    summary_template: "applicant_id: {0} updated ✓"
+
+# Response evaluation — keywords per operation type
+evaluation:
+  query:
+    expected: [applicant, id, name]
+    excluded: [error, failed, "no applicants found"]
+  create:
+    expected: [created, applicant, id]
+    excluded: [error, failed, unable]
+  list:
+    expected: [applicant, count, total]
+    excluded: [error, failed]
+
+# Audit configuration — buffering agents and domain classification
+audit:
+  audit_agents: [underwriting_agent]  # agents whose allowed controls are buffered into pipeline_summary
+  domain_keywords:                     # (domain_name, keywords) for intent classification
+    - [policy, [create_policy, policy, underwrite, bind, quote]]
+    - [applicant, [applicant, account, enroll]]
+  entity_kwarg_map:                    # kwarg_name → entity_type for extraction
+    applicant_id: applicant
+    workflow_id: workflow
+
+# Per-agent cost-tier rate limiting (applied in check_dispatch after routing)
+agent_cost:
+  window_secs: 60
+  default_limit: 0                 # 0 = unlimited for agents not in agent_limits; set e.g. 15 for a conservative cap
+  agent_limits:
+    sme_agent:       5
+    underwriting_agent: 10
+    applicant_agent:    30
+    workflow_agent:  30
+
+# JIT elevation policy — restrict tool access during certain workflow phases
+jit_elevation:
+  restricted_tools:               # tools requiring JIT elevation (write operations)
+    - create_applicant
+    - update_applicant
+    - delete_applicant
+    - create_policy
+  blocked_phases: [collecting]    # phases where all restricted tools are blocked

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.common.log.logging_config import setup_structured_logging
 from core_data.db.factory import get_login_activity_table_operations
 
 logger = setup_structured_logging(__name__)

@@ -4,7 +4,7 @@ import threading
 from typing import List, Dict, Any, Optional, Callable, TypeVar
 
 from core_data.db.graph.neo4j_client import get_neo4j_client
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.common.log.logging_config import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

@@ -2,8 +2,8 @@
 
 from typing import Optional
 
-from shared.common.log.logging_config import setup_structured_logging
-from shared.common.infra.error_helpers import handle_tool_errors as _handle_tool_errors
+from mltek.common.log.logging_config import setup_structured_logging
+from mltek.common.infra.error_helpers import handle_tool_errors as _handle_tool_errors
 
 logger = setup_structured_logging(__name__)
 

@@ -2,16 +2,16 @@ import json as _json
 from functools import wraps
 from typing import AsyncIterator
 
-from shared.common.router.resolver import call_resolver_safe, record_stream_tokens
-from shared.common.infra import extract_result_content, extract_tool_message_content
+from mltek.common.router.resolver import call_resolver_safe, record_stream_tokens
+from mltek.common.infra import extract_result_content, extract_tool_message_content
 from mcp_server.utilities.constants import TOOL_DESCRIPTIONS
 
 _WORKFLOW_TOOL_NAMES: set[str] = set(TOOL_DESCRIPTIONS.keys())
-from shared.common.infra.context import CorrelationContext, set_jit_session, set_request_id
-from shared.common.log import setup_structured_logging
-from shared.common.tools.format import normalize_tool_response_text
-from shared.common.http_client import poll_applicant_id, submit_workflow_request
-from shared.config import config
+from mltek.common.infra.context import CorrelationContext, set_jit_session, set_request_id
+from mltek.common.log import setup_structured_logging
+from mltek.common.tools.format import normalize_tool_response_text
+from mltek.common.http_client import poll_applicant_id, submit_workflow_request
+from mltek.config import config
 from bff_service.prompts import build_create_applicant_prompt
 from bff_service.schema import IntakeSession
 from bff_service.session import get_or_create_session, process_turn, stream_reply
@@ -60,7 +60,7 @@ async def _process_and_submit(session: IntakeSession, message: str, env: str = "
 
     request_id = None
     try:
-        from shared.common.infra.context import get_jit_session as _get_jit
+        from mltek.common.infra.context import get_jit_session as _get_jit
         _, _sid, _ = _get_jit()
         request_id, applicant_id = await submit_workflow_request(
             session.draft, build_create_applicant_prompt(session.draft), env=env, session_id=_sid, correlation_id=CorrelationContext.get_or_generate()
@@ -218,11 +218,11 @@ async def get_servicing_message_response(message: str, session_id: str, source: 
     if error_reply:
         reply = error_reply
     elif isinstance(result, dict):
-        from shared.common.infra.vendor import unwrap_provider_text
+        from mltek.common.infra.vendor import unwrap_provider_text
         isar = result.get("isar_synthesis") or ""
         reply = (
             unwrap_provider_text(isar).strip() if isar else None
-        ) or extract_tool_message_content(result, workflow_tool_names=_WORKFLOW_TOOL_NAMES) or extract_result_content(result)
+        ) or extract_tool_message_content(result, tool_list=_WORKFLOW_TOOL_NAMES) or extract_result_content(result)
     else:
         reply = normalize_tool_response_text(str(result))
 

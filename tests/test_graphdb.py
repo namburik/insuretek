@@ -7,7 +7,7 @@ sys.path.insert(0, "src")
 
 from mcp.client.streamable_http import streamable_http_client
 from mcp import ClientSession
-from shared.config.config_common import Config
+from mltek.config.config_common import Config
 
 MCP_URL = Config.MCP_CORE_URL  # http://127.0.0.1:8070/mcp_paytek
 PASS = "PASS"

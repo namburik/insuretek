@@ -3,7 +3,7 @@
 The implementation is now located under shared.db.dynamodb.
 """
 
-from shared.db.dynamodb.dynamodb_operations import DynamoDBTable
+from mltek.db.dynamodb.dynamodb_operations import DynamoDBTable
 from core_data.db.dynamodb.factory import (
     get_dynamodb_resource,
     get_applicants_table_operations,

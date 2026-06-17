@@ -7,9 +7,9 @@ from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
 
-from shared.config.config_common import Config
-from shared.common.infra import load_config
-from shared.common.log import setup_structured_logging
+from mltek.config.config_common import Config
+from mltek.common.infra import load_config
+from mltek.common.log import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 

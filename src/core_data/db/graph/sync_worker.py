@@ -16,8 +16,8 @@ import queue
 import threading
 from typing import Any, Dict, Optional
 
-from shared.common.log.logging_config import setup_structured_logging
-from shared.common.infra.context import CorrelationContext, get_env
+from mltek.common.log.logging_config import setup_structured_logging
+from mltek.common.infra.context import CorrelationContext, get_env
 
 logger = setup_structured_logging(__name__)
 

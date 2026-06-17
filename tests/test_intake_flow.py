@@ -16,11 +16,11 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from bff_service.endpoints import generate_intake_stream
-from shared.policy import IntakePolicy
+from mltek.policy import IntakePolicy
 from bff_service.schema import ExtractionResult, IntakeSession
 from bff_service.session import get_or_create_session, _sanitize_draft, process_turn
 from core_data.common.validation.validators import MerchantValidator
-from shared.config import config
+from mltek.config import config
 
 
 class SimpleMonkeyPatch:

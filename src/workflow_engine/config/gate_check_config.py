@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from shared.config.config_common import Config
+from mltek.config.config_common import Config
 
 _MOCK_BASE = Config.BFF_SERVICE_URL.rstrip("/")
 

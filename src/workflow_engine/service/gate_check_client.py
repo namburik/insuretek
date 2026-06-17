@@ -2,8 +2,8 @@ from typing import Any, Dict
 
 import httpx
 
-from shared.config import config as app_config
-from shared.common.log import setup_structured_logging
+from mltek.config import config as app_config
+from mltek.common.log import setup_structured_logging
 from workflow_engine.domain.workflow_domain import generate_gate_check_ref_id
 
 logger = setup_structured_logging(__name__)

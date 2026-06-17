@@ -1,7 +1,7 @@
 """Factory functions for DynamoDB table operations initialization."""
 
-from shared.common.infra.context import get_env
-from shared.db.dynamodb.dynamodb_operations import DynamoDBTable, get_dynamodb_resource
+from mltek.common.infra.context import get_env
+from mltek.db.dynamodb.dynamodb_operations import DynamoDBTable, get_dynamodb_resource
 
 
 def env_ddb():

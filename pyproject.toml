@@ -21,6 +21,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["mltek*", "insuretek*", "bff_service*", "core_data*", "mcp_server*", "web_gateway*", "workflow_engine*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

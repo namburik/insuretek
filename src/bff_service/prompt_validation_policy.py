@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from typing import Any, Protocol
 
-from shared.common.log import setup_structured_logging
-from shared.policy.abstract_policy import Policy, PolicyDecision
-from shared.common.infra.audit_decorator import audit_policy_decision
+from mltek.common.log import setup_structured_logging
+from mltek.policy.abstract_policy import Policy, PolicyDecision
+from mltek.common.infra.audit_decorator import audit_policy_decision
 
 logger = setup_structured_logging(__name__)
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from shared.common.log import setup_structured_logging
+from mltek.common.log import setup_structured_logging
 from core_data.db.graph.neo4j_client import get_neo4j_client
 
 logger = setup_structured_logging(__name__)

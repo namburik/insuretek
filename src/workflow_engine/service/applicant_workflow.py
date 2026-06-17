@@ -3,8 +3,8 @@ import json as _json
 from collections.abc import Callable
 from typing import Any, Dict
 
-from shared.common.agents.bridge import make_thread_config, resume_graph
-from shared.common.log import setup_structured_logging
+from mltek.common.agents.bridge import make_thread_config, resume_graph
+from mltek.common.log import setup_structured_logging
 from workflow_engine.service.workflow_orchestrator import WorkflowOrchestrator
 from workflow_engine.domain.workflow_domain import WorkflowState, generate_workflow_id
 from workflow_engine.repository import ApplicantJobRepository, WorkflowRepository
@@ -45,7 +45,7 @@ def _build_initial_state(workflow_id: str, applicant_id: str, context: Dict[str,
 
 
 async def initiate_workflow(applicant_id: str, context: Dict[str, Any], correlation_id: str | None = None) -> Dict[str, Any]:
-    from shared.common.infra.context import CorrelationContext
+    from mltek.common.infra.context import CorrelationContext
     if correlation_id:
         CorrelationContext.set(correlation_id)
     else:
@@ -270,7 +270,7 @@ async def run_applicant_orchestrator_graph(
             step_id = (failed_step or {}).get("label") or (failed_step or {}).get("step_id") or "unknown"
             error   = (failed_step or {}).get("note") or "step failed"
             await asyncio.to_thread(job_repo.mark_hitl_pending, request_id, step_id, step_id, error)
-            from shared.config import config as app_config
+            from mltek.config import config as app_config
             resume_url = f"{app_config.BFF_SERVICE_URL}/webhooks/orchestrator/{request_id}/resume?decision=retry"
             logger.warning("OrchestratorGraph FAIL → hitl_pending request_id=%s step=%s resume_url=%s", request_id, step_id, resume_url)
         else:

@@ -5,9 +5,9 @@ from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence,
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr, Key
 from concurrent.futures import ThreadPoolExecutor
-from shared.common.log import setup_structured_logging
-from shared.db.dynamodb.dynamodb_operations import DynamoDBTable, get_dynamodb_resource
-from shared.common.agents.bridge import (
+from mltek.common.log import setup_structured_logging
+from mltek.db.dynamodb.dynamodb_operations import DynamoDBTable, get_dynamodb_resource
+from mltek.common.agents.bridge import (
     BaseCheckpointSaver,
     Checkpoint,
     CheckpointMetadata,
@@ -19,7 +19,7 @@ from shared.common.agents.bridge import (
 )
 
 from workflow_engine.domain.workflow_domain import ApplicantWorkflow, WorkflowApprovalTask, WorkflowState
-from shared.common.tools.ddb_format import normalize_dynamodb_value, sanitize_dynamodb_map_keys as _sanitize_dynamodb_map_keys
+from mltek.common.tools.ddb_format import normalize_dynamodb_value, sanitize_dynamodb_map_keys as _sanitize_dynamodb_map_keys
 
 # ── Table names (DynamoDB physical schema — do not rename) ────────────────────
 WORKFLOW_TABLE_NAME         = "itek_workflow_applicant"

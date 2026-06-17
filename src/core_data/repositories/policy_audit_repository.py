@@ -2,7 +2,7 @@
 
 from typing import List
 
-from shared.common.log.logging_config import setup_structured_logging
+from mltek.common.log.logging_config import setup_structured_logging
 from core_data.db.factory import get_policy_audit_table_operations
 from core_data.db.models.models_policy_audit import PolicyAuditRecord
 
