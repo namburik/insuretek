@@ -17,8 +17,8 @@ from mltek.policy.metrics.evaluation import eval_step
 from mltek.common.infra import extract_state_value
 from mltek.common.log import setup_structured_logging
 from insuretek.config.config import InsureTekConfig
-from workflow_engine.service.workflow_orchestrator import (
-    _DEFAULT_WORKFLOW, _PATTERNS, _load_workflow, _render,
+from mltek.common.orchestration.workflow_orchestrator import (
+    _PATTERNS, _load_workflow, _render,
     _STATUS_FAIL, _STATUS_PASS, _STATUS_SKIP,
 )
 

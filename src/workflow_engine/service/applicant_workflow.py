@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from mltek.common.agents.bridge import make_thread_config, resume_graph
 from mltek.common.log import setup_structured_logging
-from workflow_engine.service.workflow_orchestrator import WorkflowOrchestrator
+from mltek.common.orchestration import WorkflowOrchestrator
 from workflow_engine.domain.workflow_domain import WorkflowState, generate_workflow_id
 from workflow_engine.repository import ApplicantJobRepository, WorkflowRepository
 from workflow_engine.service.workflow_graph import WorkflowGraph
@@ -168,6 +168,7 @@ async def run_applicant_orchestrator(
             on_step_complete=_on_step_complete,
             source="react",
             env=env,
+            critical_state_key="applicant_id",
         )
         success = await workflow_orchestrator.run(request_id=request_id, session_id=session_id, correlation_id=correlation_id)
 
@@ -306,7 +307,8 @@ async def run_applicant_orchestrator_graph(
 async def resume_orchestrator(request_id: str, decision: str) -> dict:
     """Resume a suspended OrchestratorGraph job after a HITL decision."""
     from workflow_engine.service.orchestrator_graph import OrchestratorGraph
-    from workflow_engine.service.workflow_orchestrator import _DEFAULT_WORKFLOW, _load_workflow
+    from mltek.common.orchestration.workflow_orchestrator import _load_workflow
+    from pathlib import Path
     job_repo = ApplicantJobRepository()
 
     job = await asyncio.to_thread(job_repo.get, request_id)
@@ -320,7 +322,8 @@ async def resume_orchestrator(request_id: str, decision: str) -> dict:
     failed_id  = hitl.get("step_id") or hitl.get("label") or ""
     saved_state: dict = hitl.get("orch_state") or {}
 
-    raw = _load_workflow(_DEFAULT_WORKFLOW)
+    workflow_path = Path(__file__).resolve().parents[1] / "config" / "orchestrator_config.yaml"
+    raw = _load_workflow(workflow_path)
     all_step_ids: list[str] = [s.get("id", "") for s in (raw.get("workflow", raw).get("steps", []))]
 
     try:

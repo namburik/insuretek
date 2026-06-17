@@ -84,6 +84,7 @@ class WorkflowOrchestrator:
         on_step_complete: Callable[[dict], Awaitable[None]] | None = None,
         source: str = "unknown",
         env: str = "prod",
+        critical_state_key: str | None = None,
     ):
         if workflow_path is None:
             workflow_path = _DEFAULT_WORKFLOW
@@ -103,6 +104,7 @@ class WorkflowOrchestrator:
         self.state: dict[str, Any] = {}
         self.results: list[dict] = []
         self.last_response: str = ""
+        self.critical_state_key: str | None = critical_state_key
 
     async def run(self, request_id: str | None = None, session_id: str | None = None, correlation_id: str | None = None) -> bool:
         """Execute all steps in order. Returns True when no step failed."""
@@ -180,11 +182,11 @@ class WorkflowOrchestrator:
                         if self.on_state_update:
                             await self.on_state_update(state_key, val)
 
-                # If this step was supposed to produce applicant_id but didn't, stop early.
-                if "applicant_id" in extract_spec and not self.state.get("applicant_id"):
-                    note = answer_str[:300].replace("\n", " ") if answer_str else "applicant_id not found in response"
+                # If a critical state key was expected but not produced, halt workflow.
+                if self.critical_state_key and self.critical_state_key in extract_spec and not self.state.get(self.critical_state_key):
+                    note = answer_str[:300].replace("\n", " ") if answer_str else f"{self.critical_state_key} not found in response"
                     await self._record(label, _STATUS_FAIL, f"Workflow Halted — {note}", logger.error, None)
-                    logger.warning("Halting orchestrator: applicant_id unavailable after step %r: %s", step_id, note)
+                    logger.warning("Halting orchestrator: %s unavailable after step %r: %s", self.critical_state_key, step_id, note)
                     return self._summary()
 
                 _grd = result.get("guardian") if isinstance(result, dict) else None

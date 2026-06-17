@@ -2,7 +2,6 @@
 
 from .context import CorrelationContext, CorrelationFilter, attach_correlation_to_trace, set_guardian_cleared, get_guardian_cleared, set_intent, get_intent
 from .config_loader import load_config
-from mltek.common.log import setup_logging, setup_structured_logging
 from .audit_decorator import audit_policy_decision, audit_inline
 from .output_adapter import OutputAdapter
 from .request_context import RequestContext

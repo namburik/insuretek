@@ -1,8 +1,8 @@
 from typing import Any, Dict
 
-from mltek.config.config_common import Config
+from insuretek.config.config import InsureTekConfig
 
-_MOCK_BASE = Config.BFF_SERVICE_URL.rstrip("/")
+_MOCK_BASE = InsureTekConfig.BFF_SERVICE_URL.rstrip("/")
 
 
 def _url(prod_url: str, gate_check: str) -> str:
