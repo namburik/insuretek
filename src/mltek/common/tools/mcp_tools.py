@@ -14,14 +14,14 @@ from pathlib import Path
 
 logger = setup_structured_logging(__name__)
 
-_RESOLVER_CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "resolver_config.yaml"
-
 
 @lru_cache(maxsize=1)
 def _load_agent_tools() -> dict[str, list[str]]:
     """Load tool lists keyed by capability from resolver_config.yaml. Cached after first load."""
+    import os
     from mltek.common.infra import load_config
-    cfg = load_config(_RESOLVER_CONFIG_PATH)
+    domain_config_path = os.getenv("DOMAIN_CONFIG_PATH", "src/insuretek/config")
+    cfg = load_config(f"{domain_config_path}/resolver_config.yaml")
     result: dict[str, list[str]] = {}
     for node in cfg.get("graph", {}).get("nodes", []):
         cap = node.get("capability")
