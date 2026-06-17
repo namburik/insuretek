@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Optional .env loading from canonical and project root locations
+# Optional .env loading from domain and project root locations
 try:
     from dotenv import load_dotenv
 except Exception:
@@ -16,8 +16,11 @@ except Exception:
 
 _project_root = Path(__file__).resolve().parents[3]
 _env_paths = [
-    # Preferred location for shared config
-    _project_root / "src" / "shared" / "config" / ".env",
+    # Domain .env (insuretek or other domain) — loaded first, can override mltek defaults
+    _project_root / "src" / os.getenv("DOMAIN_NAME", "insuretek") / "config" / ".env",
+    # mltek framework .env — framework defaults
+    Path(__file__).resolve().parent / ".env",
+    # Project root .env (legacy fallback)
     _project_root / ".env",
 ]
 
@@ -25,7 +28,6 @@ for _env_file in _env_paths:
     if _env_file.exists():
         try:
             load_dotenv(str(_env_file))
-            break
         except Exception:
             pass
 
