@@ -13,7 +13,7 @@ def setup_open_router_agent():
         AgentExecutor: The configured agent executor
     """
     # Get API key from environment variable
-    api_key = os.getenv("OPEN_ROUTER_API_KEY", "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")
+    api_key = os.getenv("OPEN_ROUTER_API_KEY")
     if not api_key:
         raise ValueError("OPEN_ROUTER_API_KEY environment variable not set")
     
