@@ -4,29 +4,20 @@ import asyncio
 import functools
 import threading
 import time
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
-
-if TYPE_CHECKING:
-    from core_data.db.models.models_policy_audit import PolicyAuditRecord
+from typing import Any, Callable, Dict, Optional
 
 from mltek.common.log.logging_config import setup_structured_logging
 
 logger = setup_structured_logging(__name__)
 
-# Lazy singleton — avoids import-time DB initialisation.
-_repo = None
-_repo_lock = threading.Lock()
 _buffer_lock = threading.Lock()
 
-
-def _get_repo():
-    global _repo
-    if _repo is None:
-        with _repo_lock:
-            if _repo is None:
-                from core_data.repositories.policy_audit_repository import PolicyAuditRepository
-                _repo = PolicyAuditRepository()
-    return _repo
+# Audit persistence callables — injected by init_audit_config() via domain provider.
+# write_fn(**kwargs): create and persist a new audit record from raw fields
+# emit_fn(record): persist a pre-built record object
+# Both are None until init_audit_config() is called; audit is silently skipped when None.
+_audit_write_fn: Callable | None = None
+_audit_emit_fn: Callable | None = None
 
 
 def _capture_context() -> tuple[str, str, str, str, str]:
@@ -54,7 +45,7 @@ _ALWAYS_AUDIT_TYPES: frozenset[str] = frozenset({"llm_judge", "reflection"})
 
 # Always write directly as a standalone record — never buffer into pipeline_summary.
 # Use for cross-cutting infrastructure concerns.
-_DIRECT_ONLY_TYPES: frozenset[str] = frozenset({"token_budget"})
+_DIRECT_ONLY_TYPES: frozenset[str] = frozenset()
 
 # Boarding_agent control buffer keyed by correlation_id.
 # Each entry: {"controls": list[dict], "phase": str, "env": str} — snapshot captured at buffer time.
@@ -73,10 +64,10 @@ def init_audit_config() -> None:
     """Initialize audit configuration from domain provider.
 
     Call this once at startup after DomainPolicyProvider is registered.
-    Safe to call early: only imports from mltek (not core_data).
-    core_data imports remain lazy, deferred to when _persist() and _get_repo() are called.
+    All domain access is injected via the domain provider — no direct imports.
     """
     global _AUDIT_AGENTS, _DOMAIN_KEYWORDS, _ENTITY_KWARG_MAP
+    global _audit_write_fn, _audit_emit_fn
     try:
         from mltek.common.router.resolver import get_domain_provider
         provider = get_domain_provider()
@@ -87,6 +78,12 @@ def init_audit_config() -> None:
             _ENTITY_KWARG_MAP = cfg.get("entity_kwarg_map", {})
             logger.info("Audit config initialized: agents=%s domains=%d",
                        _AUDIT_AGENTS, len(_DOMAIN_KEYWORDS))
+            writer = provider.get_audit_writer()
+            if writer is not None:
+                _audit_write_fn, _audit_emit_fn = writer
+                logger.info("Audit writer injected from domain provider")
+            else:
+                logger.info("Audit writer not provided — audit persistence disabled")
     except Exception as e:
         logger.warning("Could not load audit config from domain provider: %s", e)
 
@@ -139,15 +136,16 @@ def flush_pipeline_summary(correlation_id: str) -> None:
     snap_phase = entry.get("phase") or ""
     snap_env   = entry.get("env") or "prod"
     snap_intent = entry.get("intent") or ""
+    if _audit_write_fn is None:
+        return
     try:
-        from core_data.db.models.models_policy_audit import PolicyAuditRecord
         from mltek.common.infra.context import (
             get_audit_session_id, get_request_id, get_active_agent,
         )
         domain = _classify_domain(snap_intent, controls)
         policy_names = ", ".join(g["policy_type"] for g in controls)
         earliest_ts = min((c.get("created_at") or 0) for c in controls) or None
-        record = PolicyAuditRecord.create(
+        _audit_write_fn(
             policy_type="pipeline_summary",
             allowed=True,
             reason=f"{len(controls)} controls ALLOWED [{domain}]: {policy_names}",
@@ -160,7 +158,6 @@ def flush_pipeline_summary(correlation_id: str) -> None:
             metadata={"control_count": len(controls), "controls": controls, "intent_domain": domain},
             created_at=earliest_ts,
         )
-        _get_repo().record(record)
         logger.info("flush_pipeline_summary exit correlation_id=%.8s domain=%s controls=%d", correlation_id, domain, len(controls))
     except Exception as exc:
         logger.warning("flush_pipeline_summary failed: %s", exc)
@@ -205,8 +202,9 @@ async def _persist(
         elif allowed and policy_type not in _ALWAYS_AUDIT_TYPES:
             _buffer_allowed_gate(correlation_id, policy_type, operation, reason, created_at, phase, env)
             return  # boarding allowed: defer to flush_pipeline_summary
-        from core_data.db.models.models_policy_audit import PolicyAuditRecord
-        record = PolicyAuditRecord.create(
+        if _audit_write_fn is None:
+            return
+        _audit_write_fn(
             policy_type=policy_type,
             allowed=allowed,
             reason=reason,
@@ -221,7 +219,6 @@ async def _persist(
             entity_type=entity_type,
             created_at=created_at,
         )
-        _get_repo().record(record)
         logger.info("audit persist exit policy_type=%s operation=%s allowed=%s", policy_type, operation, allowed)
     except Exception as exc:
         logger.warning("audit_policy_decision persist failed policy_type=%s: %s", policy_type, exc)
@@ -348,18 +345,20 @@ def audit_inline(
         logger.debug("audit_inline: no running event loop, skipping persist policy_type=%s", policy_type)
 
 
-def emit_audit_record(record: "PolicyAuditRecord") -> None:
-    """Fire-and-forget write of a pre-built PolicyAuditRecord; safe to call from sync or async context."""
+def emit_audit_record(record: Any) -> None:
+    """Fire-and-forget write of a pre-built audit record; safe to call from sync or async context."""
+    if _audit_emit_fn is None:
+        return
     async def _task():
         try:
-            await asyncio.to_thread(_get_repo().record, record)
+            await asyncio.to_thread(_audit_emit_fn, record)
         except Exception as exc:
-            logger.warning("emit_audit_record failed policy_type=%s: %s", record.policy_type, exc)
+            logger.warning("emit_audit_record failed: %s", exc)
     try:
         asyncio.get_running_loop()
         asyncio.create_task(_task())
     except RuntimeError:
         try:
-            _get_repo().record(record)
+            _audit_emit_fn(record)
         except Exception as exc:
-            logger.warning("emit_audit_record failed policy_type=%s: %s", record.policy_type, exc)
+            logger.warning("emit_audit_record failed: %s", exc)

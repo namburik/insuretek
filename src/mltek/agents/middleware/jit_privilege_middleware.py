@@ -14,8 +14,8 @@ invocation. No token round-trip, no extra graph step, no recursion risk.
 
 from __future__ import annotations
 
-from mltek.common.agents.bridge import AgentMiddleware
-from mltek.common.agents.bridge import ToolMessage
+from mltek.agents.bridge import AgentMiddleware
+from mltek.agents.bridge import ToolMessage
 
 from mltek.common.infra.context import get_jit_session
 from mltek.common.log import setup_structured_logging

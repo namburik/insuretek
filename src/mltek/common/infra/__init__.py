@@ -29,8 +29,6 @@ from .health_check import (
 __all__ = [
     # Config loading
     "load_config",
-    # Logging
-    "setup_logging",
     "extract_result_content",
     "extract_tool_message_content",
     "extract_json_from_text",

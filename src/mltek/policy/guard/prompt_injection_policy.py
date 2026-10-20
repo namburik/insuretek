@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 import re
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -14,15 +16,12 @@ from mltek.policy.abstract_policy import Policy, PolicyDecision
 
 logger = setup_structured_logging(__name__)
 
-_DEFAULT_INJECTION_PATTERNS: list[tuple[str, str]] = [
-    ("role_override",        r"\b(you are now|act as|pretend (you are|to be)|roleplay as|simulate being)\b"),
-    ("instruction_override", r"\b(ignore (previous|all|your|prior)|disregard (all|your|previous)|forget (all|everything|your))\b"),
-    ("system_leak",          r"\b(output (your|the) system prompt|print (your )?instructions|reveal (your )?prompt|show (me )?your (system )?prompt)\b"),
-    ("jailbreak_keyword",    r"\b(jailbreak|DAN mode|developer mode|unrestricted mode|no restrictions|bypass (safety|filter|guard))\b"),
-    ("delimiter_inject",     r"(</?(system|user|assistant|human|instruction)>|\[INST\]|\[/INST\]|<\|im_start\|>|<\|im_end\|>)"),
-    ("token_smuggle",        r"(\\u[0-9a-f]{4}.*){4,}"),
-    ("indirect_inject",      r"\b(when (you|the AI) (reads?|processes?|sees?)|hidden (instruction|command|directive))\b"),
-]
+def _load_default_injection_patterns() -> list[tuple[str, str]]:
+    from mltek.common.infra.config_loader import load_config
+    domain = os.getenv("DOMAIN_NAME", "insuretek")
+    config_path = Path(__file__).resolve().parents[4] / "src" / domain / "config" / "policy_config.yaml"
+    cfg = load_config(config_path)
+    return [tuple(p) for p in cfg["prompt_injection"]["injection_patterns"]]  # type: ignore[return-value]
 
 
 class InjectionScore(BaseModel):
@@ -45,7 +44,7 @@ class PromptInjectionConfig(BaseModel):
     hard_block_threshold: int   = 1
     llm_enabled:          bool  = False
     llm_block_threshold:  float = 0.75
-    injection_patterns:   list  = Field(default_factory=lambda: list(_DEFAULT_INJECTION_PATTERNS))
+    injection_patterns:   list  = Field(default_factory=_load_default_injection_patterns)
     compiled_patterns:    list  = Field(default_factory=list)
 
     @model_validator(mode="after")
@@ -69,7 +68,7 @@ class PromptInjectionPolicy(Policy):
 
     @with_token_phase("prompt_injection")
     async def _stage2_score(self, text: str) -> tuple[float, str]:
-        from mltek.common.agents.lang_agents import call_structured_agent
+        from mltek.agents.lang_agents import call_structured_agent
 
         # Get system prompt from instance or domain provider
         system_prompt = self._system_prompt

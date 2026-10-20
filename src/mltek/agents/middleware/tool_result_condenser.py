@@ -11,8 +11,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from mltek.common.agents.bridge import AgentMiddleware
-from mltek.common.agents.bridge import ToolMessage
+from mltek.agents.bridge import AgentMiddleware
+from mltek.agents.bridge import ToolMessage
 
 from mltek.common.log import setup_structured_logging
 

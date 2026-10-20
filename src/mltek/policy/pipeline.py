@@ -176,7 +176,7 @@ class PolicyPipeline:
             hyd_decision = await self._hydration.evaluate(agent_id=ctx.target, intent=ctx.last_msg, env=ctx.env)
             hydration_block = hyd_decision.metadata.get("hydration_block", "")
             if hydration_block:
-                from mltek.common.agents.bridge import SystemMessage
+                from mltek.agents.bridge import SystemMessage
                 messages = [SystemMessage(content=hydration_block)] + messages
                 logger.info(
                     "HydrationPolicy injected context (dispatch stage): agent=%s entities=%s cache_hits=%d",
@@ -192,7 +192,7 @@ class PolicyPipeline:
             }
             context_block = meta_decision.metadata.get("context_block", "")
             if context_block:
-                from mltek.common.agents.bridge import SystemMessage
+                from mltek.agents.bridge import SystemMessage
                 messages = [SystemMessage(content=context_block)] + messages
                 logger.info("MetadataPolicy injected context: agent=%s domain=%s", ctx.target, metadata_meta["domain"])
 

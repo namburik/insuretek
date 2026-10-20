@@ -4,7 +4,6 @@ import logging
 import json
 from datetime import datetime
 from mltek.config.config_common import Config
-from mltek.common.infra.context import get_app_name
 
 
 def setup_logging(name: str = None) -> logging.Logger:
@@ -96,6 +95,7 @@ def setup_structured_logging(name_or_level: str = None, log_level: str = Config.
     Returns:
         Configured StructuredLogger instance that supports extra_fields
     """
+    from mltek.common.infra.context import get_app_name  # lazy — avoids circular import at module load
     upper = name_or_level.upper() if isinstance(name_or_level, str) else ""
     if upper in {"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"}:
         logger_name = get_app_name()

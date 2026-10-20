@@ -287,21 +287,6 @@ class TokenBudgetPolicy(Policy):
             agent or "—",
             tokens_used, new_total, self._config.max_session_tokens,
         )
-        from mltek.common.infra.audit_decorator import audit_inline
-        audit_inline(
-            policy_type="token_budget",
-            operation=f"consume:{session_id[:8] if session_id else '—'}",
-            allowed=True,
-            reason=f"Consumed {tokens_used} tokens; session total {new_total}/{self._config.max_session_tokens}.",
-            metadata={
-                "session_id":        session_id,
-                "agent":             agent or "—",
-                "tokens_consumed":   tokens_used,
-                "session_total":     new_total,
-                "session_limit":     self._config.max_session_tokens,
-                "budget_remaining":  max(0, self._config.max_session_tokens - new_total),
-            },
-        )
         return new_total
 
     @audit_policy_decision(policy_type="token_budget", operation_kwarg="session_id")

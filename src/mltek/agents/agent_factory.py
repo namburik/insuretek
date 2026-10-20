@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Callable, Any
 
-from mltek.common.agents.bridge import BaseTool
+from mltek.agents.bridge import BaseTool
 
 # Global registry for domain agent factory
 _agent_factory: "AgentFactory | None" = None

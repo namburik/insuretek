@@ -39,7 +39,7 @@ JSON schema
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Type
 
-from mltek.common.agents.bridge import END, START, StateGraph, CompiledStateGraph
+from mltek.agents.bridge import END, START, StateGraph, CompiledStateGraph
 from mltek.common.infra import load_config
 from mltek.common.log import setup_structured_logging
 

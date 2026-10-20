@@ -9,7 +9,7 @@ import time
 from typing import Dict, Tuple
 from dataclasses import dataclass
 from enum import Enum
-from mltek.common.agents.bridge import traceable
+from mltek.agents.bridge import traceable
 from mltek.config import config
 from mltek.common.log import setup_structured_logging
 

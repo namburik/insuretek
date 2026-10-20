@@ -4,7 +4,7 @@ import asyncio
 from typing import List
 
 from langchain_core.callbacks.base import AsyncCallbackHandler
-from mltek.common.agents.bridge import (
+from mltek.agents.bridge import (
     BaseMessage,
     HumanMessage,
     SystemMessage,
@@ -16,12 +16,12 @@ from mltek.common.agents.bridge import (
     traceable,
     ToolCallLimitMiddleware,
 )
-from mltek.common.agents.middleware import CorrelationMiddleware, ToolLoopGuardMiddleware, ToolIntentMiddleware
+from mltek.agents.middleware import CorrelationMiddleware, ToolLoopGuardMiddleware, ToolIntentMiddleware
 from mltek.config import config
 from mltek.common.tools.mcp_tools import get_tools, tools_list_by_capability
 from mltek.common.infra import get_last_message_content
 from mltek.common.infra.context import get_token_phase, add_request_tokens, get_request_tokens
-from mltek.common.agents import prompts as agent_prompts
+from mltek.agents import prompts as agent_prompts
 from mltek.common.log import setup_structured_logging
 
 
@@ -156,7 +156,7 @@ def create_guardian_agent(tools: List[BaseTool], response_format=None):
 async def create_multi_agent_map(env: str = "prod") -> dict:
     """Build agent map dynamically from resolver_config.yaml nodes."""
     from mltek.policy.access.jit_elevation_policy import JitElevationPolicy
-    from mltek.common.agents.agent_factory import get_agent_factory
+    from mltek.agents.agent_factory import get_agent_factory
     from mltek.common.infra import load_config
     import os
 

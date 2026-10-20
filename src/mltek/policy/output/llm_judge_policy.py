@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from mltek.common.agents.bridge import traceable
+from mltek.agents.bridge import traceable
 from mltek.common.log import setup_structured_logging
 
 from mltek.policy.abstract_policy import Policy, PolicyDecision
@@ -60,7 +60,7 @@ class LLMJudge(LLMJudgePolicy):
     @with_token_phase("judge")
     @traceable(name="llm_judge", run_type="chain")
     async def judge(self, prompt: str, response: str, source: str = "unknown") -> JudgeDecision:
-        from mltek.common.agents.lang_agents import call_structured_agent
+        from mltek.agents.lang_agents import call_structured_agent
 
         # Get system prompt from instance or domain provider
         system_prompt = self._system_prompt

@@ -24,7 +24,7 @@ async def _embed_ollama(texts: List[str], model: str, base_url: str) -> List[Lis
 
 
 async def _embed_google(texts: List[str], model: str) -> List[List[float]]:
-    from mltek.common.agents.bridge import GoogleGenerativeAIEmbeddings
+    from mltek.agents.bridge import GoogleGenerativeAIEmbeddings
     embedder = GoogleGenerativeAIEmbeddings(model=model)
     return await embedder.aembed_documents(texts)
 

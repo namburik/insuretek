@@ -4,7 +4,7 @@ import asyncio
 from mltek.common.log import setup_structured_logging
 import json
 import re
-from mltek.common.agents.bridge import traceable
+from mltek.agents.bridge import traceable
 
 logger = setup_structured_logging(__name__)
 

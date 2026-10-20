@@ -6,7 +6,7 @@ the tool call args before execution, ensuring the MCP tool always receives the
 correct ID for the current request regardless of what the LLM included.
 """
 
-from mltek.common.agents.bridge import AgentMiddleware, ToolMessage
+from mltek.agents.bridge import AgentMiddleware, ToolMessage
 from mltek.common.infra.context import CorrelationContext
 from mltek.common.log import setup_structured_logging
 

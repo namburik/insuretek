@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mltek.common.agents.bridge import HumanMessage
+from mltek.agents.bridge import HumanMessage
 from mltek.common.infra.context import with_token_phase
 from mltek.common.log import setup_structured_logging
 from mltek.policy.abstract_policy import PolicyDecision

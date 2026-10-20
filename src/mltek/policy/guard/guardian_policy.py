@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 from abc import abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
-from mltek.common.agents.bridge import traceable
+from mltek.agents.bridge import traceable
 
 from mltek.common.log import setup_structured_logging
 from mltek.policy.abstract_policy import Policy, PolicyDecision
@@ -109,6 +111,9 @@ class GuardianConfig(BaseModel):
     write_verbs: tuple[str, ...] = (
         "update", "modify", "change", "set", "rotate", "edit", "disable",
     )
+    create_verbs: tuple[str, ...] = (
+        "create", "add", "register", "onboard", "setup", "set up", "new",
+    )
     scope_keywords: tuple[str, ...] = ()  # empty = domain provides
     name_fields: tuple[str, ...] = ("name",)  # generic fallback
     explicit_id_patterns: tuple[str, ...] = ()  # empty = domain provides
@@ -194,6 +199,14 @@ class GuardianDecision:
     needs_reflection: bool = False
 
 
+def _load_default_guardian_config() -> "GuardianConfig":
+    from mltek.common.infra.config_loader import load_config
+    domain = os.getenv("DOMAIN_NAME", "insuretek")
+    config_path = Path(__file__).resolve().parents[4] / "src" / domain / "config" / "policy_config.yaml"
+    cfg = load_config(config_path)
+    return GuardianConfig.model_validate(cfg["guardian"])
+
+
 # ── Guardian agent ─────────────────────────────────────────────────────────────
 
 class GuardianAgent(GuardianPolicy):
@@ -207,7 +220,7 @@ class GuardianAgent(GuardianPolicy):
     """
 
     def __init__(self, config: GuardianConfig | None = None):
-        self._config = config or GuardianConfig()
+        self._config = config if config is not None else _load_default_guardian_config()
         init_guardian_patterns(self._config)
         self._rules  = _CompiledRules.from_config(self._config)
 
@@ -347,39 +360,32 @@ class ReformulatorResult(BaseModel):
     reason: str = Field(description="One sentence explaining what was corrected, or why reformulation failed")
 
 
-# Generic patterns — not domain-specific
-_DESTRUCTIVE_WORD_PATTERN = re.compile(
-    r"\b(delete|remove|drop|deactivate|harm|purge|revoke|cancel|terminate"
-    r"|suspend|void|erase|destroy|truncate|reset|archive|invalidate|flush)\b",
-    re.I,
-)
-_CREATE_VERB_PATTERN = re.compile(
-    r"\b(create|add|register|onboard|setup|set up|new)\b", re.I
-)
-_EMAIL_DOMAIN_RE  = re.compile(r"@([\w.-]+)")
+_EMAIL_DOMAIN_RE = re.compile(r"@([\w.-]+)")
 
-# Domain-specific patterns — initialized at runtime via init_guardian_patterns()
+# All patterns below are compiled at runtime via init_guardian_patterns()
+_DESTRUCTIVE_WORD_PATTERN: re.Pattern | None = None
+_CREATE_VERB_PATTERN: re.Pattern | None = None
 _NAME_FIELD_PATTERN: re.Pattern | None = None
 _DOMAIN_ID_PATTERNS: dict[str, re.Pattern] = {}
 
 
 def init_guardian_patterns(config: GuardianConfig) -> None:
-    """Initialize domain-specific guardian patterns from config.
+    """Compile all guardian patterns from config. Called from GuardianAgent.__init__()."""
+    global _DESTRUCTIVE_WORD_PATTERN, _CREATE_VERB_PATTERN, _NAME_FIELD_PATTERN, _DOMAIN_ID_PATTERNS
 
-    Called from GuardianAgent.__init__() after config is loaded.
-    """
-    global _NAME_FIELD_PATTERN, _DOMAIN_ID_PATTERNS
+    destr_v = "|".join(re.escape(v) for v in config.destructive_verbs)
+    _DESTRUCTIVE_WORD_PATTERN = re.compile(rf"\b({destr_v})\b", re.I)
 
-    # Build name field pattern from name_fields and domain_id_patterns
+    create_v = "|".join(re.escape(v) for v in config.create_verbs)
+    _CREATE_VERB_PATTERN = re.compile(rf"\b({create_v})\b", re.I)
+
     name_fields = "|".join(re.escape(f) for f in config.name_fields)
     if config.name_field_pattern:
-        # Use domain's custom pattern if provided, otherwise build from name_fields
         nf_pattern = config.name_field_pattern.replace("(name)", f"({name_fields})")
     else:
         nf_pattern = rf"[\"']?\b({name_fields})\b[\"']?\s*[:\-]\s*\S"
     _NAME_FIELD_PATTERN = re.compile(nf_pattern, re.I)
 
-    # Build domain ID patterns
     _DOMAIN_ID_PATTERNS.clear()
     for field_name, pattern in config.domain_id_patterns:
         _DOMAIN_ID_PATTERNS[field_name] = re.compile(pattern, re.I)
@@ -452,7 +458,7 @@ class GuardianReflectionPolicy(ReflectionPolicy):
         source: str = "react",
         env: str = "prod",
     ) -> ReflectionResult:
-        from mltek.common.agents.lang_agents import call_structured_agent
+        from mltek.agents.lang_agents import call_structured_agent
         cfg = self._config
         logger.info("Reflection starting: agent=%s reason=%s", agent_id, blocking_reason)
 

@@ -4,28 +4,89 @@ Resolves each request to the best-matching agent via LLM intent classification,
 then invokes that agent directly with per-node timeout and recursion limits.
 """
 
+from __future__ import annotations
+
 import asyncio
 import re
 from dataclasses import dataclass
 from pathlib import Path
-
+from typing import Optional
 from pydantic import BaseModel, Field
 
-from mltek.common.agents.bridge import AIMessage, HumanMessage
-from mltek.common.agents.bridge import traceable
+from mltek.domain_provider import DomainPolicyProvider
+
+_domain_provider: Optional[DomainPolicyProvider] = None
+
+
+def get_domain_provider() -> Optional[DomainPolicyProvider]:
+    """Return the registered domain policy provider, or None if not registered."""
+    return _domain_provider
+
+
+def register_domain_provider(provider: "DomainPolicyProvider") -> None:
+    """Register the domain's policy provider. Call once at system startup."""
+    import logging
+    logger_init = logging.getLogger(__name__)
+
+    global _domain_provider
+    _domain_provider = provider
+    logger_init.info("Domain provider registered: %s", provider.__class__.__name__)
+
+    # Initialize domain-specific configs
+    from mltek.common.infra.audit_decorator import init_audit_config
+    from mltek.common.router.prompts import init_routing_config
+    from mltek.policy.context.hydration_policy import init_entity_patterns
+
+    try:
+        logger_init.info("Initializing audit config...")
+        init_audit_config()
+        logger_init.info("Audit config initialized")
+    except Exception as e:
+        logger_init.error("Failed to init audit config: %s", e, exc_info=True)
+
+    try:
+        logger_init.info("Initializing routing config...")
+        init_routing_config()
+        logger_init.info("Routing config initialized")
+    except Exception as e:
+        logger_init.error("Failed to init routing config: %s", e, exc_info=True)
+
+    try:
+        logger_init.info("Initializing entity patterns...")
+        init_entity_patterns()
+        logger_init.info("Entity patterns initialized")
+    except Exception as e:
+        logger_init.error("Failed to init entity patterns: %s", e, exc_info=True)
+    # Register domain agent factory if provider supplies one
+    try:
+        from mltek.agents.agent_factory import register_agent_factory
+        factory = provider.get_agent_factory()
+        if factory is not None:
+            register_agent_factory(factory)
+    except Exception:
+        pass
+
+
+# ── Remaining imports (after domain provider is defined) ────────────────────
+
+from mltek.agents.bridge import AIMessage, HumanMessage
+from mltek.agents.bridge import traceable
 
 from mltek.common.log import setup_structured_logging
 from mltek.common.infra import CorrelationContext, RequestContext, get_last_message_content, get_last_human_message_content, extract_result_content, load_config
 from mltek.common.infra.context import set_env, set_active_agent, set_audit_session_id, set_intent, set_guardian_cleared, with_token_phase
 from mltek.common.infra.audit_decorator import flush_pipeline_summary
-from mltek.common.agents.lang_agents import call_structured_agent, get_cached_agent_map, clear_agent_map_cache, get_request_tokens
-from mltek.common.router.prompts import INTENT_RESOLVER_SYSTEM, KEYWORD_ROUTES
+from mltek.agents.lang_agents import call_structured_agent, get_cached_agent_map, clear_agent_map_cache, get_request_tokens
+from mltek.common.router import prompts as _routing_prompts
 from mltek.policy import GuardianAgent, GuardianConfig, ReflectionConfig
 from mltek.policy import MetadataEnrichmentPolicy, MetadataConfig
-from mltek.config.domain_provider import DomainPolicyProvider
+from mltek.domain_provider import DomainPolicyProvider as _DomainPolicyProvider
 from mltek.policy.guard.guardian_dispatch_policy import GuardianDispatchPolicy
 from mltek.common.router.semantic_router import SemanticRouter
 from mltek.config import config
+
+# Update TYPE_CHECKING import
+DomainPolicyProvider = _DomainPolicyProvider
 
 logger = setup_structured_logging(__name__)
 
@@ -40,35 +101,10 @@ class IntentResolution(BaseModel):
 _cached_executor: dict[str, "AgentExecutor"] = {}
 _executor_lock = asyncio.Lock()
 
-# ── Domain policy provider registry ──────────────────────────────────────────
-
-_domain_provider: DomainPolicyProvider | None = None
-
-
-def register_domain_provider(provider: DomainPolicyProvider) -> None:
-    """Register the domain's policy provider. Call once at system startup."""
-    global _domain_provider
-    _domain_provider = provider
-    # Initialize domain-specific configs
-    from mltek.common.infra.audit_decorator import init_audit_config
-    from mltek.common.router.prompts import init_routing_config
-    from mltek.policy.context.hydration_policy import init_entity_patterns
-    init_audit_config()
-    init_routing_config()
-    init_entity_patterns()
-    # Register domain agent factory if available
-    try:
-        from mltek.common.agents.agent_factory import register_agent_factory
-        from insuretek.common.agents.factory import InsureTekAgentFactory
-        register_agent_factory(InsureTekAgentFactory())
-    except ImportError:
-        # Domain agent factory may not be available in all contexts
-        pass
-
 
 def _attach_correlation_to_trace(correlation_id: str) -> None:
     try:
-        from mltek.common.agents.bridge import get_current_run_tree
+        from mltek.agents.bridge import get_current_run_tree
         run = get_current_run_tree()
         if run:
             run.extra = run.extra or {}
@@ -173,11 +209,6 @@ class AgentExecutor:
         self._default_timeout = graph_cfg.get("agent_timeout", 60)
         self._routing_mode = graph_cfg.get("routing_mode", "auto")
         self._quality_svc = None
-        try:
-            from core_data.service.policy_audit_service import QualityMetricsService
-            self._quality_svc = QualityMetricsService()
-        except Exception:
-            pass
 
     def _init_guardian(self, router_config: dict) -> None:
         self._guardian = None
@@ -332,17 +363,13 @@ class AgentExecutor:
     async def _resolve_agent(self, message: str) -> tuple[str, float, str]:
         valid_ids = {n["id"] for n in self._nodes_cfg}
 
+        keyword_routes = _routing_prompts.KEYWORD_ROUTES
+        intent_resolver_system = _routing_prompts.INTENT_RESOLVER_SYSTEM
+
         msg_lower = message.lower()
-        if not KEYWORD_ROUTES:
-            logger.warning("Keyword routes not initialized — initializing now")
-            # Ensure domain provider is registered before routing
-            if _domain_provider is None:
-                try:
-                    from insuretek.policy.domain_provider import InsureTekDomainProvider
-                    register_domain_provider(InsureTekDomainProvider())
-                except Exception as e:
-                    logger.error("Failed to auto-register domain provider: %s", e)
-        for pattern, agent_id in KEYWORD_ROUTES:
+        if not keyword_routes:
+            logger.warning("Keyword routes not initialized (len=%d) — check domain provider registration", len(keyword_routes))
+        for pattern, agent_id in keyword_routes:
             if agent_id in valid_ids and re.search(pattern, msg_lower):
                 logger.info("Keyword router → %s (pattern=%s)", agent_id, pattern)
                 return agent_id, 1.0, ""
@@ -353,7 +380,7 @@ class AgentExecutor:
                 return result
 
         agent_list = "\n".join(f'- {n["id"]}: {n.get("description", "")}' for n in self._nodes_cfg)
-        system = INTENT_RESOLVER_SYSTEM.format(agent_list=agent_list)
+        system = intent_resolver_system.format(agent_list=agent_list) if intent_resolver_system else ""
         if not system:
             logger.warning("Intent resolver system prompt is empty — domain config not loaded properly")
         logger.debug("Intent resolver: message='%s' system_prompt_len=%d", message[:200], len(system))
@@ -392,8 +419,8 @@ class AgentExecutor:
     async def _run_agent(self, agent, messages: list, max_steps: int, timeout: float, target: str) -> dict:
         """Stream the agent to completion, recovering a partial result if it hits the recursion limit."""
         logger.debug("Invoking agent %s of type %s", target, type(agent).__name__)
-        from mltek.common.agents.bridge import GraphRecursionError
-        from mltek.common.agents.bridge import ToolMessage as _ToolMessage
+        from mltek.agents.bridge import GraphRecursionError
+        from mltek.agents.bridge import ToolMessage as _ToolMessage
         from mltek.common.infra.vendor import bedrock_inline_context_to_human
         messages = bedrock_inline_context_to_human(messages)
 

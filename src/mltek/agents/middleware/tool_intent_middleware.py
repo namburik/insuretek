@@ -12,7 +12,7 @@ import contextvars
 
 from pydantic import BaseModel, Field
 
-from mltek.common.agents.bridge import AgentMiddleware, ToolMessage
+from mltek.agents.bridge import AgentMiddleware, ToolMessage
 
 from mltek.common.infra.context import get_intent, get_guardian_cleared, with_token_phase
 from mltek.common.log import setup_structured_logging
@@ -103,7 +103,7 @@ class ToolIntentMiddleware(AgentMiddleware):
 
     @with_token_phase("tool_intent")
     async def _score(self, tool_name: str, args: dict, intent: str) -> tuple[float, str]:
-        from mltek.common.agents.lang_agents import call_structured_agent
+        from mltek.agents.lang_agents import call_structured_agent
 
         # Get system prompt from instance or domain provider
         system_prompt = self._system_prompt

@@ -145,6 +145,26 @@ class DomainPolicyProvider(ABC):
         """
         ...
 
+    def get_agent_factory(self) -> Any | None:
+        """Return a domain AgentFactory instance to register, or None to skip.
+
+        The factory is registered once at startup via register_agent_factory().
+        Default returns None (no factory registration).
+        """
+        return None
+
+    def get_audit_writer(self):
+        """Return (write_fn, emit_fn) for audit persistence, or None to disable.
+
+        write_fn(**kwargs) — persists a new audit record from raw keyword args
+                            (same kwargs as PolicyAuditRecord.create)
+        emit_fn(record)   — persists a pre-built record object
+
+        Default returns None (audit persistence disabled).
+        Domain implementations should return both callables backed by their repo.
+        """
+        return None
+
     def get_guarded_agents(self) -> set[str]:
         """Return agent IDs that require Guardian pre-flight checks. Override to customize."""
         return set()
