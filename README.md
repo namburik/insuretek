@@ -28,6 +28,10 @@ approval steps when a flow requires one.
 For the full architecture, component design, and policy details, see
 [design/Design.md](design/Design.md).
 
+## Architecture
+
+![Architecture diagram](docs/architecture.svg)
+
 ## Screenshots
 
 | Intake | Track | Manage |
