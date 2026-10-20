@@ -4,8 +4,35 @@ Insuretek automates applicant onboarding for insurance products by combining
 conversational intake, policy-driven validation, and workflow orchestration
 with semantic decision support.
 
+- **Conversational intake** — a chat-driven session collects applicant data
+  incrementally, validating and persisting drafts as the conversation
+  progresses rather than requiring a single large form submission.
+- **Policy-driven validation** — every request passes through layered policy
+  gates (prompt injection detection, rate limiting, compliance/guardian
+  checks, cost and token budgets) before and after agent execution, so
+  validation rules can evolve independently of the conversation or workflow
+  code.
+- **Workflow orchestration** — a state machine drives applicants through the
+  onboarding steps, enforcing valid state transitions, supporting
+  asynchronous gate checks (e.g. underwriting approvals), and allowing flows
+  to be safely interrupted and resumed or retried.
+- **Semantic decision support** — an intent resolver routes each request to
+  the right specialized agent (keyword match → semantic router → LLM intent
+  classifier) and can synthesize agent output into a coherent response,
+  giving the system reasoning capability beyond fixed scripted flows.
+
+Together these layers aim for onboarding that is fully automated end-to-end,
+but remains auditable, safe to retry, and able to support human review or
+approval steps when a flow requires one.
+
 For the full architecture, component design, and policy details, see
 [design/Design.md](design/Design.md).
+
+## Screenshots
+
+| Intake | Track | Manage |
+|---|---|---|
+| ![Intake](docs/screenshots/intake.png) | ![Track](docs/screenshots/track.png) | ![Manage](docs/screenshots/manage.png) |
 
 ## Package structure
 
