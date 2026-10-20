@@ -2,14 +2,12 @@
 
   PolicyAuditService    — scoped reads: by session, correlation, request, policy type
   ForensicAuditService  — read-only: entity timelines, causal chains, cross-session history
-  get_quality_summary   — aggregates routing confidence and judge verdict audit records
-  format_quality_summary — formats get_quality_summary output as a markdown table
+  aggregate_quality_metrics   — aggregates routing confidence and judge verdict audit records
 """
 
 from __future__ import annotations
 
 import json
-import threading
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -53,38 +51,31 @@ class PolicyAuditService:
     def __init__(self) -> None:
         self._repo = PolicyAuditRepository()
 
-    def _to_dict(self, record: PolicyAuditRecord) -> Dict[str, Any]:
-        return _record_to_dict(record)
-
     @handle_repo_errors
     def get_by_session(self, session_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Return all policy decisions for a session, most recent first."""
         records = self._repo.get_by_session(session_id, limit=limit)
-        result = [self._to_dict(r) for r in records]
+        result = [_record_to_dict(r) for r in records]
         logger.info("policy_audit get_by_session session_id=%s count=%d", session_id, len(result))
         return result
 
     @handle_repo_errors
     def get_by_correlation(self, correlation_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Return all policy decisions for an HTTP request correlation ID, most recent first."""
         records = self._repo.get_by_correlation(correlation_id, limit=limit)
-        result = [self._to_dict(r) for r in records]
+        result = [_record_to_dict(r) for r in records]
         logger.info("policy_audit get_by_correlation correlation_id=%s count=%d", correlation_id, len(result))
         return result
 
     @handle_repo_errors
     def get_by_request_id(self, request_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Return all policy decisions associated with a workflow request_id, most recent first."""
         records = self._repo.get_by_request_id(request_id, limit=limit)
-        result = [self._to_dict(r) for r in records]
+        result = [_record_to_dict(r) for r in records]
         logger.info("policy_audit get_by_request_id request_id=%s count=%d", request_id, len(result))
         return result
 
     @handle_repo_errors
     def get_by_policy_type(self, policy_type: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """Return recent policy decisions for a given policy type, most recent first."""
         records = self._repo.get_by_policy_type(policy_type, limit=limit)
-        result = [self._to_dict(r) for r in records]
+        result = [_record_to_dict(r) for r in records]
         logger.info("policy_audit get_by_policy_type policy_type=%s count=%d", policy_type, len(result))
         return result
 
@@ -130,6 +121,18 @@ class PolicyAuditService:
         return summary
 
 
+def get_audit_writer():
+    """Return (write_fn, emit_fn) backed by PolicyAuditRepository for use by the domain provider."""
+
+    def write_fn(**kwargs):
+        PolicyAuditRepository().create(PolicyAuditRecord.create(**kwargs))
+
+    def emit_fn(record):
+        PolicyAuditRepository().create(record)
+
+    return write_fn, emit_fn
+
+
 # ── ForensicAuditService ──────────────────────────────────────────────────────
 
 class ForensicAuditService:
@@ -173,6 +176,24 @@ class ForensicAuditService:
                   "session_count": len(session_list), "sessions": session_list}
         logger.info("ForensicAuditService get_cross_session_history exit applicant_id=%s sessions=%d", applicant_id, len(session_list))
         return result
+
+    def get_isar_evidence(self, applicant_id: str = "", correlation_id: str = "", limit: int = 2) -> str:
+        def _filter(rows):
+            return sorted([r for r in rows if r.policy_type == "isar_decision"], key=lambda r: r.created_at or 0, reverse=True)[:limit]
+
+        applicant_id = applicant_id.removeprefix("applicant:").strip()
+        if applicant_id:
+            records = _filter(self._repo.get_by_entity_id(applicant_id, limit=200))
+            label = f"applicant={applicant_id}"
+        elif correlation_id:
+            records = _filter(self._repo.get_by_correlation(correlation_id, limit=200))
+            label = f"correlation={correlation_id}"
+        else:
+            records = self._repo.get_by_policy_type("isar_decision", limit=limit)
+            label = "recent"
+        dicts = [_record_to_dict(r) for r in records]
+        logger.info("ForensicAuditService.get_isar_evidence label=%s count=%d", label, len(dicts))
+        return self.format_records(dicts, label=f"isar_evidence · {label}")
 
     @staticmethod
     def _fmt_ts(created_at: int | None) -> str:
@@ -390,18 +411,6 @@ class ForensicAuditService:
 
 # ── Quality summary helpers ───────────────────────────────────────────────────
 
-_qs_repo = None
-_qs_repo_lock = threading.Lock()
-
-
-def _get_qs_repo():
-    global _qs_repo
-    if _qs_repo is None:
-        with _qs_repo_lock:
-            if _qs_repo is None:
-                _qs_repo = PolicyAuditRepository()
-    return _qs_repo
-
 
 def _empty_quality_summary(agent_id: Optional[str], window_hours: int) -> Dict[str, Any]:
     return {"window_hours": window_hours, "agent_id": agent_id,
@@ -409,12 +418,12 @@ def _empty_quality_summary(agent_id: Optional[str], window_hours: int) -> Dict[s
             "judge":   {"total": 0, "pass_rate": None, "avg_confidence": 0.0}}
 
 
-def get_quality_summary(agent_id: Optional[str] = None, window_hours: int = 24) -> Dict[str, Any]:
+def aggregate_quality_metrics(agent_id: Optional[str] = None, window_hours: int = 24) -> Dict[str, Any]:
     cutoff_ms = int((time.time() - window_hours * 3600) * 1000)
     try:
-        records = _get_qs_repo().get_by_policy_type("quality_metric", limit=10_000, since_ms=cutoff_ms)
+        records = PolicyAuditRepository().get_by_policy_type("quality_metric", limit=10_000, since_ms=cutoff_ms)
     except Exception:
-        logger.warning("get_quality_summary fetch failed", exc_info=True)
+        logger.warning("aggregate_quality_metrics fetch failed", exc_info=True)
         return _empty_quality_summary(agent_id, window_hours)
 
     routing_confidences: List[float] = []
@@ -444,7 +453,7 @@ def get_quality_summary(agent_id: Optional[str] = None, window_hours: int = 24) 
     avg_routing = (sum(routing_confidences) / len(routing_confidences)) if routing_confidences else 0.0
     pass_rate   = (sum(judge_passed) / len(judge_passed)) if judge_passed else None
     avg_judge   = (sum(judge_confidences) / len(judge_confidences)) if judge_confidences else 0.0
-    logger.info("get_quality_summary agent=%s routing=%d judge=%d",
+    logger.info("aggregate_quality_metrics agent=%s routing=%d judge=%d",
                 agent_id or "all", len(routing_confidences), len(judge_passed))
     return {
         "window_hours": window_hours, "agent_id": agent_id,
@@ -453,22 +462,3 @@ def get_quality_summary(agent_id: Optional[str] = None, window_hours: int = 24) 
     }
 
 
-def format_quality_summary(data: Dict[str, Any] | None) -> str:
-    if not data:
-        return "No quality metrics found."
-    r = data.get("routing", {})
-    j = data.get("judge", {})
-    agent  = data.get("agent_id") or "all agents"
-    window = data.get("window_hours", 24)
-    return "\n".join([
-        f"**Quality Summary** — agent `{agent}` · window {window}h",
-        "",
-        "| Signal | Total | Value |",
-        "|--------|-------|-------|",
-        f"| Routing confidence | {r.get('total', 0)} | avg {r.get('avg_confidence', 0):.4f} · {r.get('below_threshold', 0)} below threshold |",
-        "| Judge verdict | {} | {} · avg confidence {:.4f} |".format(
-            j.get('total', 0),
-            ("pass rate {:.2%}".format(j['pass_rate']) if j.get('pass_rate') is not None else "no data"),
-            j.get('avg_confidence', 0),
-        ),
-    ])

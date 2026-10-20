@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 from typing_extensions import TypedDict
 
-from mltek.common.agents.bridge import (
+from mltek.agents.bridge import (
     Command, END, START, StateGraph,
     GraphInterrupt, interrupt, make_thread_config, resume_graph,
 )
@@ -21,7 +21,7 @@ from mltek.policy.metrics.evaluation import eval_step
 from mltek.common.infra import extract_state_value
 from mltek.common.log import setup_structured_logging
 from insuretek.config.config import InsureTekConfig
-from mltek.common.orchestration.workflow_orchestrator import (
+from mltek.orchestration.workflow_orchestrator import (
     _load_workflow, _render, _PATTERNS,
     _STATUS_FAIL, _STATUS_PASS, _STATUS_SKIP,
 )

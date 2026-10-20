@@ -9,11 +9,12 @@ from mltek.common.starlette_app import StreamableStarletteApp, run_starlette_app
 # Expose src/ so that `dbtek.*` package imports resolve
 from core_data.service.graph_service import GraphService
 from core_data.service.applicant_service import ApplicantService
+from core_data.service.policy_audit_service import ForensicAuditService
 from mltek.config import config
 from mltek.common.infra.context import set_app_name
 from mltek.common.router.resolver import register_domain_provider
 from mltek.common.log import setup_structured_logging
-from insuretek.policy.domain_provider import InsureTekDomainProvider
+from insuretek.domain_provider import InsureTekDomainProvider
 
 set_app_name("insuretek")
 register_domain_provider(InsureTekDomainProvider())
@@ -32,6 +33,7 @@ class MsSemanticContextServer:
         self._graph_service: GraphService | None = None
         self._graph_init_lock = threading.Lock()
         self._applicant_service = ApplicantService()
+        self._forensic_service = ForensicAuditService()
 
     def _get_graph_service(self) -> GraphService:
         with self._graph_init_lock:
@@ -107,64 +109,12 @@ class MsSemanticContextServer:
         return f"applicant_id: {applicant_id}\n" + result
 
 
-    async def isar_explain_applicant(self, applicant_id: str) -> str:
-        from core_data.repositories.applicant_repository import ApplicantRepository, PolicyRepository
-        applicant = ApplicantRepository().get_by_id(applicant_id)
-        if not applicant:
-            return f"Applicant {applicant_id} not found."
-
-        policy  = PolicyRepository().get_active_policy(applicant_id)
-        lines = [f"applicant_id: {applicant_id}"]
-        for attr in ("policy_type", "risk_tier", "status"):
-            v = getattr(applicant, attr, None)
-            if v:
-                lines.append(f"{attr}: {v.value if hasattr(v, 'value') else v}")
-        contact = getattr(applicant, "contact_info", None)
-        if contact:
-            if getattr(contact, "full_name", None):  lines.append(f"applicant_name: {contact.full_name}")
-            if getattr(contact, "email", None):       lines.append(f"email: {contact.email}")
-            if getattr(contact, "phone", None):       lines.append(f"phone: {contact.phone}")
-        loc = getattr(applicant, "location_address", None)
-        if loc:
-            parts = [getattr(loc, f, None) for f in ("city", "state", "zip_code")]
-            loc_str = ", ".join(p for p in parts if p)
-            if loc_str: lines.append(f"location: {loc_str}")
-        cov = getattr(applicant, "coverage_request", None)
-        if cov:
-            if getattr(cov, "coverage_amount", None):  lines.append(f"coverage_amount: {cov.coverage_amount}")
-            if getattr(cov, "deductible", None):        lines.append(f"deductible: {cov.deductible}")
-        if policy:
-            lines.append(f"policy_id: {getattr(policy, 'policy_id', '')}")
-            lines.append(f"policy_status: {getattr(policy, 'status', '')}")
-
-        raw = "\n".join(lines)
-        logger.info("isar_explain_applicant assembled applicant_id=%s", applicant_id)
-        return raw
+    def isar_explain_applicant(self, applicant_id: str) -> str:
+        return self._applicant_service.isar_explain_applicant(applicant_id)
 
 
 
 
-def _get_isar_evidence(applicant_id: str, correlation_id: str, limit: int) -> str:
-    from core_data.repositories.policy_audit_repository import PolicyAuditRepository
-    from core_data.service.policy_audit_service import ForensicAuditService
-    repo = PolicyAuditRepository()
-    # Accept 'applicant:<uuid>' display format or bare UUID.
-    applicant_id = applicant_id.removeprefix("applicant:").strip()
-    if applicant_id:
-        rows = repo.get_by_entity_id(applicant_id, limit=200)
-        records = sorted([r for r in rows if r.policy_type == "isar_decision"], key=lambda r: r.created_at or 0, reverse=True)[:limit]
-        label = f"applicant={applicant_id}"
-    elif correlation_id:
-        rows = repo.get_by_correlation(correlation_id, limit=200)
-        records = sorted([r for r in rows if r.policy_type == "isar_decision"], key=lambda r: r.created_at or 0, reverse=True)[:limit]
-        label = f"correlation={correlation_id}"
-    else:
-        records = repo.get_by_policy_type("isar_decision", limit=limit)
-        label = "recent"
-    from core_data.service.policy_audit_service import _record_to_dict
-    dicts = [_record_to_dict(r) for r in records]
-    logger.info("get_isar_evidence exit label=%s count=%d", label, len(dicts))
-    return ForensicAuditService.format_records(dicts, label=f"isar_evidence · {label}")
 
 
 def main(
@@ -209,12 +159,13 @@ def main(
                     arguments.get("applicant_id", ""),
                 )
             case MSAgentTools.ISAR_EXPLAIN_APPLICANT.value:
-                result = await ms_sc_server.isar_explain_applicant(
+                result = await asyncio.to_thread(
+                    ms_sc_server.isar_explain_applicant,
                     arguments.get("applicant_id", ""),
                 )
             case MSAgentTools.GET_ISAR_EVIDENCE.value:
                 result = await asyncio.to_thread(
-                    _get_isar_evidence,
+                    ms_sc_server._forensic_service.get_isar_evidence,
                     arguments.get("applicant_id") or "",
                     arguments.get("correlation_id") or "",
                     int(arguments.get("limit", 2)),

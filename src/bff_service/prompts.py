@@ -5,7 +5,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from core_data.domain.enums import PolicyType
+from insuretek.domain.enums import PolicyType
 from bff_service.schema import DraftUpdates
 
 INTAKE_REQUIRED_LABELS = {

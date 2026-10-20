@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 from mltek.common.infra.context import CorrelationContext, set_request_id, set_audit_session_id
 from mltek.common.log import setup_structured_logging
@@ -177,16 +178,16 @@ async def create_workflow_job_request(body: dict, job_repo: ApplicantJobReposito
     return {"request_id": request_id, "status": "pending"}
 
 
-def get_workflow_request(request_id: str, job_repo: ApplicantJobRepository) -> dict | None:
-    return job_repo.get(request_id)
+def get_workflow_request(request_id: str, job_repo: ApplicantJobRepository | None = None) -> dict | None:
+    return (job_repo or ApplicantJobRepository()).get(request_id)
 
 
-def get_workflow_request_by_workflow_id(workflow_id: str, job_repo: ApplicantJobRepository) -> dict | None:
-    return job_repo.get_by_workflow_id(workflow_id)
+def get_workflow_request_by_workflow_id(workflow_id: str, job_repo: ApplicantJobRepository | None = None) -> dict | None:
+    return (job_repo or ApplicantJobRepository()).get_by_workflow_id(workflow_id)
 
 
-def get_applicant_by_id(applicant_id: str, job_repo: ApplicantJobRepository) -> dict | None:
-    return job_repo.get_by_applicant_id(applicant_id)
+def get_applicant_by_id(applicant_id: str, job_repo: ApplicantJobRepository | None = None) -> dict | None:
+    return (job_repo or ApplicantJobRepository()).get_by_applicant_id(applicant_id)
 
 
 def _resolve_orchestrator_request_id(any_id: str, job_repo: ApplicantJobRepository) -> str | None:
@@ -217,7 +218,7 @@ def _resolve_orchestrator_request_id(any_id: str, job_repo: ApplicantJobReposito
 async def resume_orchestrator_step(any_id: str, decision: str, notes: str = "") -> dict:
     """Resume a HITL-suspended OrchestratorGraph job.
 
-    ``any_id`` may be an orchestrator request_id (UUID), applicant_id, or approval workflow_id.
+    ``any_id`` may be an orchestrator request_id (req_xxx), applicant_id (UUID), or approval workflow_id (wf_xxx).
     ``decision`` must be ``"retry"`` or ``"skip"``.
     """
     from mltek.config import config as app_config
@@ -238,14 +239,50 @@ async def resume_orchestrator_step(any_id: str, decision: str, notes: str = "") 
 
 def get_prior_decision_traces(enterprise_id: str, repo: WorkflowRepository | None = None) -> dict:
     """Return pending workflow issues for a specific enterprise_identifier."""
+    from core_data.repositories.applicant_repository import ApplicantRepository
     repository = repo or WorkflowRepository()
-    rows = repository.get_prior_decision_traces(enterprise_id)
+
+    applicants = ApplicantRepository().list_by_enterprise_identifier(enterprise_id)
+    applicant_ids = [a.applicant_id for a in applicants if getattr(a, "applicant_id", None)]
+    if not applicant_ids:
+        rows = []
+    else:
+        with ThreadPoolExecutor(max_workers=min(10, len(applicant_ids))) as pool:
+            workflow_results = list(pool.map(repository.get_workflows_by_applicant_id, applicant_ids))
+        workflows = [wf for sublist in workflow_results for wf in sublist]
+
+        if workflows:
+            with ThreadPoolExecutor(max_workers=min(10, len(workflows))) as pool:
+                task_results = list(pool.map(
+                    lambda wf: repository.get_tasks_by_workflow_id(wf["workflow_id"]) if wf.get("workflow_id") else [],
+                    workflows,
+                ))
+        else:
+            task_results = []
+
+        rows = []
+        for wf, tasks in zip(workflows, task_results):
+            workflow_id = wf.get("workflow_id")
+            if not workflow_id:
+                continue
+            for task in tasks:
+                if task.get("status") == "COMPLETED":
+                    continue
+                rows.append({
+                    "workflow_id":      workflow_id,
+                    "gate_check":       task.get("gate_check"),
+                    "response_payload": task.get("response_payload", {}),
+                    "current_state":    wf.get("current_state"),
+                })
+        logger.info(
+            "get_prior_decision_traces enterprise_id=%s workflow_count=%d trace_count=%d",
+            enterprise_id, len(workflows), len(rows),
+        )
+
     unique_states: dict[str, dict] = {}
     for r in rows:
         state = r.get("current_state")
-        if not state:
-            continue
-        if state not in unique_states:
+        if state and state not in unique_states:
             unique_states[state] = {"current_state": state}
     issues = list(unique_states.values())
     response = {

@@ -22,8 +22,8 @@ class StaticMetadataStore(MetadataStore):
 
     async def get_statistical_profile(self, domain: str) -> dict[str, Any]:
         try:
-            from core_data.domain.enums import PolicyType
-            from core_data.domain.constants import (
+            from insuretek.domain.enums import PolicyType
+            from insuretek.domain.constants import (
                 ApplicantJsonFields, LocationAddressFields,
                 ContactInfoFields, ServerDefaults,
             )

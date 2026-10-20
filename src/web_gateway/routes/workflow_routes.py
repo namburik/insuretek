@@ -136,6 +136,11 @@ def _extract_identifier_from_text(text: str) -> str | None:
     if not text:
         return None
 
+    # Request ID: req_xxxxxxxxxxxxxxxx
+    match = re.search(r"req_[0-9a-f]{16}", text, re.IGNORECASE)
+    if match:
+        return match.group(0)
+
     # Applicant ID: UUID pattern
     match = re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", text, re.IGNORECASE)
     if match:
@@ -190,7 +195,7 @@ async def orchestrator_resume_endpoint(request: Request) -> JSONResponse:
     """POST /webhooks/orchestrator/{any_id}/resume  or  GET ?decision=retry|skip
 
     Resume a HITL-suspended OrchestratorGraph job.
-    ``any_id`` may be an applicant_id (UUID), request_id, or workflow_id.
+    ``any_id`` may be an applicant_id (UUID), request_id (req_xxx), or workflow_id (wf_xxx).
 
     POST body: {"decision": "retry"|"skip", "notes": "optional"}
     GET query: ?decision=retry|skip

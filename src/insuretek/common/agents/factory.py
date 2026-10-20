@@ -1,12 +1,12 @@
 """InsureTek-specific agent factory — implements abstract factory interface."""
 
 from typing import List, Any
-from mltek.common.agents.bridge import BaseTool
-from mltek.common.agents.agent_factory import AgentFactory
-from mltek.common.agents.middleware import JitPrivilegeMiddleware, ToolResultCondenserMiddleware
-from mltek.common.agents.middleware import ToolIntentMiddleware
-from mltek.common.agents.bridge import ToolCallLimitMiddleware
-from mltek.common.agents.lang_agents import _make_agent, _get_domain_prompt
+from mltek.agents.bridge import BaseTool
+from mltek.agents.agent_factory import AgentFactory
+from mltek.agents.middleware import JitPrivilegeMiddleware, ToolResultCondenserMiddleware
+from mltek.agents.middleware import ToolIntentMiddleware
+from mltek.agents.bridge import ToolCallLimitMiddleware
+from mltek.agents.lang_agents import _make_agent, _get_domain_prompt
 
 
 class InsureTekAgentFactory(AgentFactory):

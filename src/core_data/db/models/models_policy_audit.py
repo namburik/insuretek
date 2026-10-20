@@ -2,7 +2,7 @@ import uuid
 from pydantic import Field, field_validator
 from typing import Any, Dict, Optional
 
-from core_data.db.models.models_base import DatabaseModel, current_timestamp_ms
+from mltek.db.models.base import DatabaseModel, current_timestamp_ms
 
 
 class PolicyAuditRecord(DatabaseModel):

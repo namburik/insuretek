@@ -11,7 +11,7 @@ from mltek.common.log.logging_config import setup_structured_logging
 from core_data.repositories.base_repository import BaseRepository
 from core_data.db.models.models_applicant import Applicant, InsurancePolicy
 from core_data.db.factory import get_applicants_table_operations, get_policies_table_operations
-from core_data.domain.enums import PolicyStatus
+from insuretek.domain.enums import PolicyStatus
 
 logger = setup_structured_logging(__name__)
 
@@ -162,7 +162,7 @@ class PolicyRepository(BaseRepository[InsurancePolicy]):
 
     @handle_repo_errors
     def get_active_policy(self, applicant_id: str) -> Optional[InsurancePolicy]:
-        active_statuses = {PolicyStatus.QUOTED.value, PolicyStatus.BOUND.value, PolicyStatus.ACTIVE.value}
+        active_statuses = {PolicyStatus.DRAFT.value, PolicyStatus.QUOTED.value, PolicyStatus.BOUND.value, PolicyStatus.ACTIVE.value}
         items = self.policies.scan(
             filter_expression=Attr("applicant_id").eq(applicant_id)
         )

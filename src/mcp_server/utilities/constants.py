@@ -46,7 +46,7 @@ class WorkflowMcpTools(str, Enum):
     GET_FORENSIC_AUDIT           = "get_forensic_audit"
     GET_CAUSAL_CHAIN             = "get_causal_chain"
     GET_CROSS_SESSION_HISTORY    = "get_cross_session_history"
-    GET_QUALITY_SUMMARY          = "get_quality_summary"
+    GET_QUALITY_SUMMARY          = "aggregate_quality_metrics"
 
 
 TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -87,7 +87,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
         "coverage request, and active policy. Use for any question about a known applicant."
     ),
     # Workflow tools
-    "get_workflow_job_by_request_id": "Retrieve underwriting workflow status by request_id (UUID).",
+    "get_workflow_job_by_request_id": "Retrieve underwriting workflow status by request_id (req_xxx).",
     "get_workflow_job_by_applicant_id": "Retrieve underwriting workflow details for an applicant_id.",
     "get_orchestrator_status_by_request_id": (
         "Return the step-by-step orchestrator execution status for an underwriting job by request_id. "
@@ -106,7 +106,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     ),
     "get_policy_audit_by_request_id": "Return all policy decisions recorded for a workflow request_id.",
     "get_policy_audit_summary": "Aggregate policy decisions into a summary of allowed/denied counts per policy_type. Scope by session_id or correlation_id.",
-    "get_quality_summary": (
+    "aggregate_quality_metrics": (
         "Return aggregated quality metrics for the AI pipeline: routing confidence histogram and LLM Judge pass rate. "
         "Filter by agent_id (optional) and a lookback window in hours."
     ),

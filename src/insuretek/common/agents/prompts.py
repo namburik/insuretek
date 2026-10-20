@@ -105,7 +105,7 @@ WORKFLOW_SYSTEM_PROMPT = (
     "   - 'forensic' or 'timeline' + applicant_id → get_forensic_audit\n"
     "   - 'causal chain' or 'causation' + correlation_id → get_causal_chain\n"
     "   - 'cross-session' or 'session history' → get_cross_session_history\n"
-    "   - 'quality' or 'quality summary' → get_quality_summary\n\n"
+    "   - 'quality' or 'quality summary' → aggregate_quality_metrics\n\n"
     "5. ISAR evidence (request mentions 'isar evidence', 'evidence chain', 'rule-firing', 'what rules fired', or 'isar'):\n"
     "   - applicant_id present → get_isar_evidence with applicant_id\n"
     "   - correlation_id present → get_isar_evidence with correlation_id\n\n"

@@ -4,10 +4,9 @@ from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Sequence,
 
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Attr, Key
-from concurrent.futures import ThreadPoolExecutor
 from mltek.common.log import setup_structured_logging
 from mltek.db.dynamodb.dynamodb_operations import DynamoDBTable, get_dynamodb_resource
-from mltek.common.agents.bridge import (
+from mltek.agents.bridge import (
     BaseCheckpointSaver,
     Checkpoint,
     CheckpointMetadata,
@@ -178,49 +177,15 @@ def get_job_by_workflow_id(workflow_id: str) -> Optional[Dict[str, Any]]:
 
 # ── Decision traces ───────────────────────────────────────────────────────────
 
-def get_prior_decision_traces(enterprise_id: str) -> List[Dict[str, Any]]:
-    from core_data.repositories.applicant_repository import ApplicantRepository
-    applicants = ApplicantRepository().list_by_enterprise_identifier(enterprise_id)
-    applicant_ids = [a.applicant_id for a in applicants if getattr(a, "applicant_id", None)]
-    if not applicant_ids:
-        return []
+def query_workflows_by_applicant(applicant_id: str) -> List[Dict[str, Any]]:
+    return workflow_table.query(
+        Key("applicant_id").eq(applicant_id),
+        index_name="applicant-created-index",
+    )
 
-    def _query_workflows(applicant_id: str) -> List[Dict[str, Any]]:
-        return workflow_table.query(
-            Key("applicant_id").eq(applicant_id),
-            index_name="applicant-created-index",
-        )
 
-    with ThreadPoolExecutor(max_workers=min(10, len(applicant_ids))) as pool:
-        workflow_results = list(pool.map(_query_workflows, applicant_ids))
-
-    workflows = [wf for sublist in workflow_results for wf in sublist]
-
-    def _query_tasks(wf: Dict[str, Any]) -> List[Dict[str, Any]]:
-        wid = wf.get("workflow_id")
-        return approval_tasks_table.query(Key("workflow_id").eq(wid)) if wid else []
-
-    task_results: List[List[Dict[str, Any]]] = []
-    if workflows:
-        with ThreadPoolExecutor(max_workers=min(10, len(workflows))) as pool:
-            task_results = list(pool.map(_query_tasks, workflows))
-
-    traces: List[Dict[str, Any]] = []
-    for wf, tasks in zip(workflows, task_results):
-        workflow_id = wf.get("workflow_id")
-        if not workflow_id:
-            continue
-        for task in tasks:
-            if task.get("status") == "COMPLETED":
-                continue
-            traces.append({
-                "workflow_id":      workflow_id,
-                "gate_check":       task.get("gate_check"),
-                "response_payload": task.get("response_payload", {}),
-                "current_state":    wf.get("current_state"),
-            })
-    logger.info("get_prior_decision_traces enterprise_id=%s workflow_count=%d trace_count=%d", enterprise_id, len(workflows), len(traces))
-    return traces
+def query_tasks_by_workflow(workflow_id: str) -> List[Dict[str, Any]]:
+    return approval_tasks_table.query(Key("workflow_id").eq(workflow_id))
 
 
 # ── Orchestrator job ops (itek_workflow_applicant_request table) ──────────────
@@ -258,10 +223,23 @@ def create_job(request_id: str) -> None:
     logger.info("Inserted workflow job request_id=%s", request_id)
 
 
+def _deserialize_steps(item: Dict[str, Any]) -> Dict[str, Any]:
+    steps = item.get("steps")
+    if isinstance(steps, str):
+        import json as _json
+        try:
+            item["steps"] = _json.loads(steps)
+        except Exception:
+            item["steps"] = []
+    elif isinstance(steps, list):
+        item["steps"] = normalize_dynamodb_value(steps)
+    return item
+
+
 def get_job(request_id: str) -> Optional[Dict[str, Any]]:
     _proj = ["request_id", "status", "applicant_id", "result", "steps", "error", "workflow_id", "hitl_step"]
     item = workflow_request_table.get_item({"request_id": request_id}, projection=_proj)
-    return normalize_dynamodb_value(item) if item is not None else None
+    return _deserialize_steps(normalize_dynamodb_value(item)) if item is not None else None
 
 
 def update_job_applicant_id(request_id: str, applicant_id: str) -> None:
@@ -307,18 +285,26 @@ def get_job_by_applicant_id(applicant_id: str) -> Optional[Dict[str, Any]]:
             filter_expression=Attr("applicant_id").eq(applicant_id),
             projection=_proj,
         )
-    return normalize_dynamodb_value(items[0]) if items else None
+    return _deserialize_steps(normalize_dynamodb_value(items[0])) if items else None
 
 
 def append_job_step(request_id: str, step: dict) -> None:
+    import json as _json
     item = workflow_request_table.get_item({"request_id": request_id})
     if not item:
         return
-    steps = item.get("steps") or []
-    steps.append(step)
+    raw_steps = item.get("steps") or []
+    if isinstance(raw_steps, str):
+        try:
+            raw_steps = _json.loads(raw_steps)
+        except Exception:
+            raw_steps = []
+    else:
+        raw_steps = normalize_dynamodb_value(raw_steps)
+    raw_steps.append(step)
     workflow_request_table.update_item(
         {"request_id": request_id},
-        {"steps": steps, "updated_at": iso_now()},
+        {"steps": _json.dumps(raw_steps, default=str), "updated_at": iso_now()},
     )
     logger.debug("Appended step request_id=%s status=%s", request_id, step.get("status"))
 

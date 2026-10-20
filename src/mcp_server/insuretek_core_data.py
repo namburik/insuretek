@@ -33,7 +33,7 @@ from mltek.common.starlette_app import StreamableStarletteApp, run_starlette_app
 from mltek.config.config_common import Config
 from mltek.common.infra.context import set_app_name, set_env, get_env
 from mltek.common.router.resolver import register_domain_provider
-from insuretek.policy.domain_provider import InsureTekDomainProvider
+from insuretek.domain_provider import InsureTekDomainProvider
 
 set_app_name("insuretek")
 register_domain_provider(InsureTekDomainProvider())

@@ -3,9 +3,9 @@ import json as _json
 from collections.abc import Callable
 from typing import Any, Dict
 
-from mltek.common.agents.bridge import make_thread_config, resume_graph
+from mltek.agents.bridge import make_thread_config, resume_graph
 from mltek.common.log import setup_structured_logging
-from mltek.common.orchestration import WorkflowOrchestrator
+from mltek.orchestration import WorkflowOrchestrator
 from workflow_engine.domain.workflow_domain import WorkflowState, generate_workflow_id
 from workflow_engine.repository import ApplicantJobRepository, WorkflowRepository
 from workflow_engine.service.workflow_graph import WorkflowGraph
@@ -307,7 +307,7 @@ async def run_applicant_orchestrator_graph(
 async def resume_orchestrator(request_id: str, decision: str) -> dict:
     """Resume a suspended OrchestratorGraph job after a HITL decision."""
     from workflow_engine.service.orchestrator_graph import OrchestratorGraph
-    from mltek.common.orchestration.workflow_orchestrator import _load_workflow
+    from mltek.orchestration.workflow_orchestrator import _load_workflow
     from pathlib import Path
     job_repo = ApplicantJobRepository()
 

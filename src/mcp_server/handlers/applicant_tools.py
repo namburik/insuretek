@@ -93,21 +93,7 @@ class ApplicantHandlers:
     @_handle_tool_errors()
     def get_high_risk_applicants(self):
         """Return applicants with HIGH_RISK or DECLINED risk tier."""
-        from core_data.domain.enums import RiskTier
-        from core_data.repositories.applicant_repository import ApplicantRepository
-        tiers = [RiskTier.HIGH_RISK.value, RiskTier.DECLINED.value]
-        applicants = ApplicantRepository().list_by_risk_tiers(tiers)
-        result = [
-            {
-                "applicant_id": a.applicant_id,
-                "applicant_name": a.applicant_name,
-                "policy_type": a.policy_type.value if a.policy_type else None,
-                "risk_tier": a.risk_tier.value if a.risk_tier else None,
-            }
-            for a in applicants
-        ]
-        logger.info("get_high_risk_applicants count=%d", len(result))
-        return {"total": len(result), "applicants": result}
+        return self.service.get_high_risk_applicants()
 
     @_handle_tool_errors()
     def delete_applicant(self, applicant_id: str):

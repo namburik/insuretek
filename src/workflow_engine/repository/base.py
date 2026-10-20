@@ -35,7 +35,11 @@ class WorkflowRepositoryBase(ABC):
         pass
 
     @abstractmethod
-    def get_prior_decision_traces(self, enterprise_id: str) -> List[Dict[str, Any]]:
+    def get_workflows_by_applicant_id(self, applicant_id: str) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def get_tasks_by_workflow_id(self, workflow_id: str) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod

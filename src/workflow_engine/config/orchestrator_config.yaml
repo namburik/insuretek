@@ -34,7 +34,7 @@ workflow:
         {{ policy_data }}
         Return the policy_id that was assigned.
       extract_state:
-        policy_id: pol_pattern
+        policy_id: "pol_[0-9a-f]{16}"
 
     # ── Bind ──────────────────────────────────────────────────────────────────
 

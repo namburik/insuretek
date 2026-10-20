@@ -10,7 +10,7 @@ from mltek.config.config_common import Config
 from mltek.common.infra.context import set_app_name
 from mltek.common.router.resolver import register_domain_provider
 from mltek.common.log.logging_config import setup_structured_logging
-from insuretek.policy.domain_provider import InsureTekDomainProvider
+from insuretek.domain_provider import InsureTekDomainProvider
 
 set_app_name("insuretek")
 register_domain_provider(InsureTekDomainProvider())
@@ -19,11 +19,12 @@ from mltek.common.tools.format import format_tool_result
 from mcp_server.utilities.transform import require_arg, unwrap_object_argument
 from mcp_server.utilities.constants import WorkflowMcpTools
 from mcp_server.utilities.tools_schemas import get_tool_description, get_tool_schema
-from core_data.service.policy_audit_service import ForensicAuditService, get_quality_summary, format_quality_summary
-from workflow_engine.repository import ApplicantJobRepository
+from core_data.service.policy_audit_service import ForensicAuditService, aggregate_quality_metrics
+from mcp_server.utilities.transform import format_quality_summary
 from workflow_engine.service.workflow_endpoints import (
     get_workflow_by_applicant_id,
     get_workflow_request,
+    get_applicant_by_id,
     get_prior_decision_traces,
 )
 
@@ -133,16 +134,16 @@ def _format_issues(data: dict | None) -> str:
     return "\n".join(lines)
 
 
-def _resolve_tool_result(name: str, arguments: dict, job_repo: ApplicantJobRepository, audit_svc) -> str | dict:
+def _resolve_tool_result(name: str, arguments: dict, audit_svc) -> str | dict:
     tool_handlers = {
         WorkflowMcpTools.GET_ORCHESTRATOR_BY_REQUEST.value: lambda args: _format_orchestrator_job(
-            job_repo.get(require_arg(args, "request_id"))
+            get_workflow_request(require_arg(args, "request_id"))
         ),
         WorkflowMcpTools.GET_ORCHESTRATOR_BY_APPLICANT.value: lambda args: _format_orchestrator_job(
-            job_repo.get_by_applicant_id(require_arg(args, "applicant_id"))
+            get_applicant_by_id(require_arg(args, "applicant_id"))
         ),
         WorkflowMcpTools.GET_REQUEST_JOB.value: lambda args: get_workflow_request(
-            require_arg(args, "request_id"), job_repo
+            require_arg(args, "request_id")
         ),
         WorkflowMcpTools.GET_APPLICANT_JOB.value: lambda args: _format_workflow(
             get_workflow_by_applicant_id(require_arg(args, "applicant_id"))
@@ -193,7 +194,7 @@ def _resolve_tool_result(name: str, arguments: dict, job_repo: ApplicantJobRepos
             )
         ),
         WorkflowMcpTools.GET_QUALITY_SUMMARY.value: lambda args: format_quality_summary(
-            get_quality_summary(
+            aggregate_quality_metrics(
                 agent_id=args.get("agent_id") or None,
                 window_hours=int(args.get("window_hours", 24)),
             )
@@ -213,7 +214,6 @@ def main(port: int, log_level: str, json_response: bool) -> None:
     logger.info("Agent Workflow MCP Server starting port=%d log_level=%s", port, log_level)
 
     from core_data.service.policy_audit_service import PolicyAuditService
-    job_repo = ApplicantJobRepository()
     audit_svc = PolicyAuditService()
     server = Server("agent_workflow_server")
 
@@ -224,7 +224,7 @@ def main(port: int, log_level: str, json_response: bool) -> None:
         correlation_id = arguments.get("correlation_id", "")
         _key = next(iter(arguments.values()), "") if arguments else ""
         logger.info("tool enter name=%s key=%s correlation_id=%s", name, _key, correlation_id)
-        result = _resolve_tool_result(name, arguments, job_repo, audit_svc)
+        result = _resolve_tool_result(name, arguments, audit_svc)
         logger.info("tool complete name=%s", name)
         if isinstance(result, dict):
             return result

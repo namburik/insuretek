@@ -12,7 +12,8 @@ from workflow_engine.db.dynamodb.operations import (
     get_workflow_id_by_reference_id,
     get_active_workflow_by_applicant_id,
     update_workflow_task,
-    get_prior_decision_traces,
+    query_workflows_by_applicant,
+    query_tasks_by_workflow,
     update_workflow_state,
     append_guardian_event,
 )
@@ -49,8 +50,11 @@ class WorkflowRepository(WorkflowRepositoryBase):
     def update_task(self, task: WorkflowApprovalTask) -> None:
         update_workflow_task(task)
 
-    def get_prior_decision_traces(self, enterprise_id: str) -> list[dict]:
-        return get_prior_decision_traces(enterprise_id)
+    def get_workflows_by_applicant_id(self, applicant_id: str) -> list[dict]:
+        return query_workflows_by_applicant(applicant_id)
+
+    def get_tasks_by_workflow_id(self, workflow_id: str) -> list[dict]:
+        return query_tasks_by_workflow(workflow_id)
 
     def update_state(
         self,

@@ -9,6 +9,7 @@ guardian:
   bulk_quantifiers: [all, every, bulk]
   destructive_verbs: [harm, delete, remove, drop, deactivate, purge, revoke, cancel, terminate, suspend, void, erase, destroy, truncate, reset, archive, invalidate, flush]
   write_verbs: [update, modify, change, set, rotate, edit, disable]
+  create_verbs: [create, add, register, onboard, setup, set up, new]
   scope_keywords:              # domain-specific keywords (Insurance)
     - applicant
     - policy
@@ -125,16 +126,12 @@ live_hydration:
   cache_ttl_secs: 120
   domains: [applicant, underwriting, semantic, workflow]
 
-# Routing constraints — (env, agent) pairs blocked by RoutingPolicy.
-# Use "*" as a wildcard for env or agent.
+# Routing — access constraints and keyword/intent routing configuration
 routing:
   rules:
     - env: shadow
       agent: sme_agent
       message: "Advanced Queries are not available in shadow mode."
-
-# Router configuration — keyword routes and intent disambiguation
-routing:
   keyword_routes:
     - ["\\bisar.?(evidence|chain|conclusion|history)\\b", "sme_agent"]
     - ["\\b(workflow|job.?status|request.?id|workflow.?id|policy.?audit|audit.?trail|session.?audit)\\b", "workflow_agent"]

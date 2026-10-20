@@ -21,10 +21,10 @@ from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from mltek.common.agents.bridge import interrupt
+from mltek.agents.bridge import interrupt
 from mltek.common.tools.ddb_format import DDBJsonEncoder
 
-from mltek.common.agents.graph_builder import GraphBuilder
+from mltek.agents.graph_builder import GraphBuilder
 from workflow_engine.repository import WorkflowRepository, get_workflow_checkpointer
 
 from workflow_engine.config import GRAPH_CONFIG_PATH as _GRAPH_CONFIG
@@ -32,7 +32,7 @@ from workflow_engine.config import GRAPH_CONFIG_PATH as _GRAPH_CONFIG
 if not _GRAPH_CONFIG.exists():
     raise FileNotFoundError(f"Workflow graph config not found: {_GRAPH_CONFIG}")
 
-from mltek.common.agents.lang_agents import call_structured_agent
+from mltek.agents.lang_agents import call_structured_agent
 from mltek.common.router.resolver import call_resolver
 from mltek.common.infra.context import set_jit_session, with_token_phase
 from mltek.common.infra import extract_result_content

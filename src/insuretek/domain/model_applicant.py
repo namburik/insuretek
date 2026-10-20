@@ -3,7 +3,7 @@
 from typing import Dict, Any, Optional, Union
 from pydantic import BaseModel, Field, field_validator
 
-from core_data.domain.enums import PolicyType, RiskTier, PolicyStatus
+from insuretek.domain.enums import PolicyType, RiskTier, PolicyStatus
 
 
 _LENIENT = {"extra": "ignore", "populate_by_name": True}

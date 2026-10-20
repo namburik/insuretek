@@ -23,12 +23,10 @@ class SessionData(Protocol):
 # ── Sensitive data patterns ────────────────────────────────────────────────────
 
 _DEFAULT_EXPLICIT_ID_PATTERNS = (
-    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
-    r"client_[0-9a-f]{12,}",
-    r"price_[a-z0-9]{8,}",
-    r"prce_[a-z0-9]{8,}",
-    r"grp_[a-z0-9]{8,}",
-    r"wf_[a-z0-9]{8,}",
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",  # applicant_id
+    r"pol_[0-9a-f]{16}",   # policy_id
+    r"wf_[0-9a-f]{12}",    # workflow_id
+    r"req_[0-9a-f]{16}",   # request_id
 )
 
 _SENSITIVE_DATA_PATTERNS = [

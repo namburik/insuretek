@@ -85,12 +85,13 @@ graph:
         - get_workflow_job_by_applicant_id
         - get_policy_audit_by_session
         - get_policy_audit_by_correlation
+        - get_policy_audit_by_request_id
         - get_policy_audit_by_policy_type
         - get_policy_audit_summary
         - get_forensic_audit
         - get_causal_chain
         - get_cross_session_history
-        - get_quality_summary
+        - aggregate_quality_metrics
 
     - id: sme_agent
       capability: semantic

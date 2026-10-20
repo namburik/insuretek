@@ -10,7 +10,7 @@ _WORKFLOW_TOOL_NAMES: set[str] = set(TOOL_DESCRIPTIONS.keys())
 from mltek.common.infra.context import CorrelationContext, set_jit_session, set_request_id
 from mltek.common.log import setup_structured_logging
 from mltek.common.tools.format import normalize_tool_response_text
-from mltek.common.http_client import poll_applicant_id, submit_workflow_request
+from insuretek.common.http_client import poll_applicant_id, submit_workflow_request
 from mltek.config import config
 from bff_service.prompts import build_create_applicant_prompt
 from bff_service.schema import IntakeSession

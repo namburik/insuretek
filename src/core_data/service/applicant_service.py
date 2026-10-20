@@ -3,12 +3,13 @@
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone
 
-from core_data.domain.ids import generate_applicant_id, generate_policy_id
-from core_data.domain.enums import PolicyType, PolicyStatus
-from core_data.domain.constants import ENTERPRISE_IDENTIFIER_DEFAULT
-from core_data.domain.model_applicant import ApplicantData, CoverageRequest, RiskProfile, LocationAddress, ContactInfo
+from insuretek.domain.ids import generate_applicant_id, generate_policy_id
+from insuretek.domain.enums import PolicyType, PolicyStatus, RiskTier
+from insuretek.domain.constants import ENTERPRISE_IDENTIFIER_DEFAULT
+from insuretek.domain.model_applicant import ApplicantData, CoverageRequest, RiskProfile, LocationAddress, ContactInfo
 from core_data.db.models.models_applicant import Applicant, InsurancePolicy
 from core_data.repositories.applicant_repository import ApplicantRepository, PolicyRepository
+from insuretek.domain.validators import ApplicantValidator
 from mltek.common.infra.setup import deep_merge
 from mltek.common.log.logging_config import setup_structured_logging
 
@@ -26,6 +27,9 @@ class ApplicantService:
         self.policy_repo = policy_repo or PolicyRepository()
 
     def create_applicant(self, applicant_json: Dict[str, Any]) -> Dict[str, Any]:
+        is_valid, error = ApplicantValidator.validate_applicant_json(applicant_json)
+        if not is_valid:
+            raise ValueError(error)
         applicant_id = generate_applicant_id()
         data = ApplicantData.model_validate(applicant_json)
 
@@ -174,3 +178,48 @@ class ApplicantService:
         policy.status = PolicyStatus.CANCELLED
         self.policy_repo.update(policy)
         logger.info("ApplicantService.cancel_policy applicant_id=%s policy_id=%s", applicant_id, policy.policy_id)
+
+    def isar_explain_applicant(self, applicant_id: str) -> str:
+        applicant = self.applicant_repo.get_by_id(applicant_id)
+        if not applicant:
+            return f"Applicant {applicant_id} not found."
+        policy = self.policy_repo.get_active_policy(applicant_id)
+        lines = [f"applicant_id: {applicant_id}"]
+        for attr in ("policy_type", "risk_tier", "status"):
+            v = getattr(applicant, attr, None)
+            if v:
+                lines.append(f"{attr}: {v.value if hasattr(v, 'value') else v}")
+        contact = getattr(applicant, "contact_info", None)
+        if contact:
+            if getattr(contact, "full_name", None):  lines.append(f"applicant_name: {contact.full_name}")
+            if getattr(contact, "email", None):       lines.append(f"email: {contact.email}")
+            if getattr(contact, "phone", None):       lines.append(f"phone: {contact.phone}")
+        loc = getattr(applicant, "location_address", None)
+        if loc:
+            parts = [getattr(loc, f, None) for f in ("city", "state", "zip_code")]
+            loc_str = ", ".join(p for p in parts if p)
+            if loc_str: lines.append(f"location: {loc_str}")
+        cov = getattr(applicant, "coverage_request", None)
+        if cov:
+            if getattr(cov, "coverage_amount", None):  lines.append(f"coverage_amount: {cov.coverage_amount}")
+            if getattr(cov, "deductible", None):        lines.append(f"deductible: {cov.deductible}")
+        if policy:
+            lines.append(f"policy_id: {getattr(policy, 'policy_id', '')}")
+            lines.append(f"policy_status: {getattr(policy, 'status', '')}")
+        logger.info("ApplicantService.isar_explain_applicant applicant_id=%s", applicant_id)
+        return "\n".join(lines)
+
+    def get_high_risk_applicants(self) -> Dict[str, Any]:
+        tiers = [RiskTier.HIGH_RISK.value, RiskTier.DECLINED.value]
+        applicants = self.applicant_repo.list_by_risk_tiers(tiers)
+        result = [
+            {
+                "applicant_id":  a.applicant_id,
+                "applicant_name": a.applicant_name,
+                "policy_type":   a.policy_type.value if a.policy_type else None,
+                "risk_tier":     a.risk_tier.value if a.risk_tier else None,
+            }
+            for a in applicants
+        ]
+        logger.info("ApplicantService.get_high_risk_applicants count=%d", len(result))
+        return {"total": len(result), "applicants": result}

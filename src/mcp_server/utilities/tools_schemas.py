@@ -106,7 +106,7 @@ def get_policy_audit_summary_schema() -> Dict[str, Any]:
     return {"type": "object", "properties": {"session_id": {"type": "string"}, "correlation_id": {"type": "string"}}}
 
 
-def get_quality_summary_schema() -> Dict[str, Any]:
+def aggregate_quality_metrics_schema() -> Dict[str, Any]:
     return {"type": "object", "properties": {"agent_id": {"type": ["string", "null"]}, "window_hours": {"type": "integer", "default": 24}}, "required": []}
 
 
@@ -254,7 +254,7 @@ _SCHEMA_REGISTRY: Dict[str, Any] = {
     "get_policy_audit_by_policy_type": get_policy_audit_by_policy_type_schema,
     "get_policy_audit_by_request_id":  get_policy_audit_by_request_id_schema,
     "get_policy_audit_summary":        get_policy_audit_summary_schema,
-    "get_quality_summary":             get_quality_summary_schema,
+    "aggregate_quality_metrics":             aggregate_quality_metrics_schema,
     "get_isar_evidence":               get_isar_evidence_schema,
     "get_forensic_audit":              get_forensic_audit_schema,
     "get_causal_chain":                get_causal_chain_schema,

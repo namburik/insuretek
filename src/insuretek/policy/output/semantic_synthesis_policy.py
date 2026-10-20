@@ -5,8 +5,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from mltek.common.infra.context import with_token_phase
 from mltek.common.log import setup_structured_logging
+from mltek.policy.output.synthesis_policy import SynthesisPolicyBase
 
 logger = setup_structured_logging(__name__)
 
@@ -29,7 +29,6 @@ def _parse_isar_version(isar_text: str) -> str:
 
 
 def _build_registries() -> tuple[dict[str, str], dict[str, str], str]:
-    """Return (narrative_registry, evidence_registry, isar_version)."""
     from insuretek.common.agents.prompts import ISAR_SYSTEM_PROMPT
     isar_ref = _load_isar_reference()
     narrative_prompt = ISAR_SYSTEM_PROMPT.format(isar_reference=isar_ref)
@@ -84,55 +83,28 @@ def _emit_isar_decision(evidence_dict: dict, applicant_id: str | None) -> None:
         logger.warning("_emit_isar_decision: failed to emit audit record: %s", exc)
 
 
-class SemanticSynthesisPolicy:
+class SemanticSynthesisPolicy(SynthesisPolicyBase):
     """Post-agent output policy: synthesizes isar_explain_applicant tool output into a narrative via LLM."""
 
-    @staticmethod
-    def applies(result: dict) -> bool:
-        """Return True only if a registered tool message is present in result."""
-        if not _NARRATIVE_REGISTRY:
-            return False
-        msgs = result.get("messages", [])
-        return any(
-            (hasattr(m, "tool_call_id") or "tool" in type(m).__name__.lower())
-            and getattr(m, "name", None) in _NARRATIVE_REGISTRY
-            and getattr(m, "status", "success") != "error"
-            for m in msgs
-        )
+    def __init__(self) -> None:
+        super().__init__(_NARRATIVE_REGISTRY, _EVIDENCE_REGISTRY)
 
-    @with_token_phase("synthesize")
-    async def synthesize(self, result: dict) -> dict:
-        from mltek.common.agents.lang_agents import call_chat_agent
+    async def _run_synthesis(
+        self,
+        result: dict,
+        tool_name: str,
+        user_request: str,
+        raw_context: str,
+    ) -> dict:
+        from mltek.agents.lang_agents import call_chat_agent, call_structured_agent
+        from insuretek.policy.output.isar_evidence_chain import IsarDecisionOutput
 
-        msgs = result.get("messages", [])
-        tool_msg = next(
-            (m for m in reversed(msgs)
-             if (hasattr(m, "tool_call_id") or "tool" in type(m).__name__.lower())
-             and getattr(m, "name", None) in _NARRATIVE_REGISTRY
-             and getattr(m, "status", "success") != "error"),
-            None,
-        )
-
-        tool_name = getattr(tool_msg, "name")
-        narrative_prompt = _NARRATIVE_REGISTRY[tool_name]
-        evidence_prompt = _EVIDENCE_REGISTRY[tool_name]
-
-        user_request = next(
-            (getattr(m, "content", "") for m in reversed(msgs) if "human" in type(m).__name__.lower()),
-            "",
-        )
-
-        content = tool_msg.content
-        if isinstance(content, list):
-            content = "\n".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in content)
-        raw_context = content.strip()
+        narrative_prompt = self._narrative_registry[tool_name]
+        evidence_prompt = self._evidence_registry[tool_name]
         task_input = f"USER REQUEST:\n{user_request}\n\nAPPLICANT CONTEXT:\n{raw_context}"
 
         logger.info("SemanticSynthesisPolicy.synthesize: tool=%s chars=%d", tool_name, len(task_input))
 
-        # Run narrative (user-facing) and evidence extraction (audit-only) concurrently.
-        from mltek.common.agents.lang_agents import call_structured_agent
-        from mltek.policy.output.isar_evidence_chain import IsarDecisionOutput
         try:
             narrative, evidence = await asyncio.gather(
                 call_chat_agent(task_input, system_prompt=narrative_prompt),
@@ -143,7 +115,7 @@ class SemanticSynthesisPolicy:
             return result
 
         applicant_id = _extract_applicant_id(raw_context)
-        from core_data.db.models.models_base import current_timestamp_ms
+        from mltek.db.models.base import current_timestamp_ms
         evidence_dict: dict = {
             "isar_version": _isar_version,
             "evaluated_at": current_timestamp_ms(),

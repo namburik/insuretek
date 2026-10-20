@@ -20,7 +20,7 @@ def generate_workflow_id() -> str:
 
 
 def generate_request_id() -> str:
-    return str(uuid.uuid4())
+    return f"req_{uuid.uuid4().hex[:16]}"
 
 
 def generate_gate_check_ref_id(gate_check: str) -> str:

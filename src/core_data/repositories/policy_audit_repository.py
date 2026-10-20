@@ -36,17 +36,17 @@ class PolicyAuditRepository:
     def __init__(self):
         self.table = get_policy_audit_table_operations()
 
-    def record(self, record: PolicyAuditRecord) -> None:
+    def create(self, record: PolicyAuditRecord) -> None:
         """Write one policy audit record. Swallows all errors."""
         try:
             item = record.to_backend_item()
             self.table.put_item(_sanitize(item))
             logger.info(
-                "policy_audit record exit audit_id=%s policy_type=%s allowed=%s",
+                "policy_audit create audit_id=%s policy_type=%s allowed=%s",
                 record.audit_id, record.policy_type, record.allowed,
             )
         except Exception as exc:
-            logger.warning("Failed to record policy audit: %s", exc)
+            logger.warning("Failed to create policy audit record: %s", exc)
 
     def get_by_session(self, session_id: str, limit: int = 100) -> List[PolicyAuditRecord]:
         """Return audit records for a session, most recent first."""

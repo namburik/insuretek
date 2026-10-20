@@ -3,9 +3,9 @@
 from pydantic import Field, field_serializer, ConfigDict
 from typing import Dict, Any, Optional
 
-from core_data.db.models.models_base import DatabaseModel, current_timestamp_ms
-from core_data.domain.enums import PolicyType, RiskTier, PolicyStatus
-from core_data.domain.model_applicant import CoverageRequest, RiskProfile, LocationAddress, ContactInfo
+from mltek.db.models.base import DatabaseModel, current_timestamp_ms
+from insuretek.domain.enums import PolicyType, RiskTier, PolicyStatus
+from insuretek.domain.model_applicant import CoverageRequest, RiskProfile, LocationAddress, ContactInfo
 
 
 class Applicant(DatabaseModel):

@@ -2,8 +2,8 @@
 
 from typing import Dict, Any, Tuple, Optional, List
 
-from core_data.domain.enums import PolicyType
-from core_data.domain.constants import (
+from insuretek.domain.enums import PolicyType
+from insuretek.domain.constants import (
     ApplicantJsonFields,
     LocationAddressFields,
     ContactInfoFields,

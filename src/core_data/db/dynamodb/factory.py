@@ -6,9 +6,9 @@ from mltek.db.dynamodb.dynamodb_operations import DynamoDBTable, get_dynamodb_re
 
 def env_ddb():
     if get_env() == 'prod':
-        from core_data.domain.constants import DynamoDBTableNames
+        from insuretek.domain.constants import DynamoDBTableNames
     elif get_env() == 'shadow':
-        from core_data.domain.constants import DynamoDBShadowTableNames as DynamoDBTableNames
+        from insuretek.domain.constants import DynamoDBShadowTableNames as DynamoDBTableNames
     return DynamoDBTableNames
 
 
