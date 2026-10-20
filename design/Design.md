@@ -1,4 +1,4 @@
-# Paytek — Technical Design Document
+# Insuretek — Technical Design Document
 
 > **Audience:** Product, operations, security, and engineering stakeholders
 > **Status:** Living document — updated as the system evolves
@@ -7,10 +7,10 @@
 
 ## 1. Purpose
 
-Paytek automates merchant onboarding by combining conversational intake, policy-driven validation, and workflow orchestration with semantic decision support. The design prioritizes safe, auditable onboarding flows while preserving the flexibility to support approvals, review, and interruption.
+Insuretek automates applicant onboarding for insurance products by combining conversational intake, policy-driven validation, and workflow orchestration with semantic decision support. The design prioritizes safe, auditable onboarding flows while preserving the flexibility to support approvals, review, and interruption.
 
 ### Outcomes
-- Complete merchant onboarding in a guided automated flow
+- Complete applicant onboarding in a guided automated flow
 - Clear separation of intake, workflow execution, and agent reasoning
 - Strong compliance gating with auditability and retry safety
 - Support for production and shadow environments with distinct runtime behavior
@@ -19,91 +19,208 @@ Paytek automates merchant onboarding by combining conversational intake, policy-
 
 ## 2. L1 Architecture — System Boundaries
 
+### Package structure
+
+The codebase is split into two tiers with a hard dependency boundary:
+
+| Package | Role | Imports |
+|---|---|---|
+| `mltek` | Control layer — framework, policies, routing, agent execution | No domain imports |
+| `insuretek` | Domain layer — implements `mltek.domain_provider.DomainPolicyProvider` | Imports from `mltek` only |
+| `core_data` | Data access layer — repositories, DB models, audit persistence | Imports from `insuretek` domain models |
+| `bff_service` | Intake layer — conversational session, prompt validation | Imports `mltek`, `insuretek`, `core_data` |
+| `mcp_server` | MCP tool server — exposes data tools to agents | Imports `insuretek`, `core_data` |
+| `workflow_engine` | Workflow state machine and orchestration | Imports `mltek`, `insuretek`, `core_data` |
+| `web_gateway` | HTTP layer — routes, React frontend | Imports `bff_service`, `workflow_engine` |
+
 ### Primary system layers
 - **Intake layer**: conversational data collection, validation, draft persistence, and session handling
 - **Workflow layer**: orchestrates onboarding steps, manages async gate checks, and enforces state transitions
 - **Agent layer**: routes intent, executes specialized actions, and provides semantic reasoning
-- **Storage layer**: persists merchant state, workflow checkpoints, and graph relationships
+- **Storage layer**: persists applicant state, workflow checkpoints, and audit records
 
 ### L1 logical flow
 
 ```text
-User input → Intake → Orchestrator → Workflow engine
-                   ↓                     ↓
-               Policy checks        Tool/Agent execution
-                   ↓                     ↓
-             Validation outcomes   Graph/DB updates
-                   ↓                     ↓
-         Approval / rejection    Activation / audit trail
+User input → BFF Intake → mltek Resolver (AgentExecutor)
+                  ↓                     ↓
+            Prompt policies      Intent routing → Agent dispatch
+                  ↓                     ↓
+          Session validation     MCP tool execution
+                  ↓                     ↓
+       Response / audit trail    core_data / DynamoDB updates
 ```
 
 ### Key architectural boundaries
-- **UI / intake** is responsible for surface-level conversational flow and draft state.
-- **Workflow engine** owns long-running onboarding progress, gate checks, and state transitions.
-- **Agents** own decision routing, tool invocation, and semantic context generation.
-- **Policies** guard inputs, tool calls, and routing decisions before state changes occur.
+- **`mltek`** owns all policy machinery, agent execution, audit infrastructure, and the resolver. It never imports from `insuretek` directly — all domain behaviour enters through the `DomainPolicyProvider` interface.
+- **`insuretek`** is the plugin layer. `InsureTekDomainProvider` wires domain-specific prompts, configs, fetchers, and factories into the `mltek` resolver at startup.
+- **`core_data`** is the data access layer. Repositories and services are consumed by the MCP server, BFF, and workflow engine.
+- **`web_gateway`** is the sole HTTP entry point — it delegates intake to `bff_service` and workflow operations to `workflow_engine`.
 
 ---
 
 ## 3. L2 Component Design
 
-### 3.1 Intake and session management
+### 3.1 Control layer — `mltek`
 
-- Captures merchant draft data through conversational turns
+`mltek` is the reusable framework. It never imports domain code; all domain customization flows in via `DomainPolicyProvider`.
+
+#### 3.1.1 Resolver (`mltek/common/router/resolver.py`)
+
+Central entry point for all agent requests. Implements `AgentExecutor` and the public helpers `call_resolver` / `call_resolver_safe`.
+
+Execution phases (in order):
+1. `_run_intake_control` — rate limit, prompt injection, live hydration
+2. `_run_pre_route_safety` — Guardian pre-flight (hard block, no reflection)
+3. `_resolve_target_agent` — keyword match → semantic router → LLM intent classifier
+4. `_run_dispatch_control` — caller auth, cost, token budget, routing admission, metadata enrichment
+5. `_run_post_route_safety` — post-route Guardian + Reflection escalation
+6. `_execute_agent` — stream selected agent to completion (with recursion-limit recovery)
+7. `synthesize` — optional post-agent ISAR synthesis
+8. `_process_response_control` — PII redaction, token accounting, audit flush, LLM judge
+
+#### 3.1.2 `DomainPolicyProvider` (`mltek/domain_provider.py`)
+
+Abstract contract that domain packages implement once and register via `register_domain_provider()`. The resolver calls only this interface — it never imports from the domain directly. Key methods:
+
+| Method | Purpose |
+|---|---|
+| `get_hydration_fetchers()` | Entity-type → fetcher callable mapping for live context injection |
+| `get_metadata_store()` | `MetadataStore` for `MetadataEnrichmentPolicy` |
+| `get_synthesis_policy()` | Post-agent synthesis policy (e.g. `SemanticSynthesisPolicy`), or `None` |
+| `get_agent_domain_mapping()` | `agent_id → domain` string for enrichment and hydration |
+| `get_system_prompt(type)` | Domain-specific LLM system prompts (judge, guardian, injection, etc.) |
+| `get_caller_auth_config()` | Role → agent mapping from domain `policy_config.yaml` |
+| `get_agent_cost_config()` | Per-agent call-limit config |
+| `get_jit_elevation_config()` | Restricted tools and blocked phases |
+| `get_guardian_config()` | Guardian threat-detection rules |
+| `get_routing_config()` | Keyword routes and intent resolver system prompt |
+| `get_audit_config()` | Audit agents, domain keywords, entity kwarg map |
+| `get_entity_patterns()` | Entity ID regex patterns for hydration extraction |
+| `get_audit_writer()` | `(write_fn, emit_fn)` for policy audit persistence |
+| `get_agent_factory()` | Optional domain `AgentFactory` instance registered at startup |
+
+#### 3.1.3 Policy layer (`mltek/policy/`)
+
+All policy classes live in `mltek/policy/`. Sub-packages:
+
+| Sub-package | Policies |
+|---|---|
+| `access/` | `CallerAuthorizationPolicy`, `AgentCostPolicy`, `RateLimitPolicy`, `TokenBudgetPolicy`, `JitElevationPolicy`, `RoutingPolicy` |
+| `guard/` | `GuardianAgent`, `GuardianDispatchPolicy`, `PromptInjectionPolicy` |
+| `context/` | `LiveHydrationPolicy`, `MetadataEnrichmentPolicy` |
+| `output/` | `LLMJudgePolicy`, `SensitiveRedactionPolicy`, `SynthesisPolicy` (base) |
+| `metrics/` | `EvaluationPolicy`, `RoutingMetrics` |
+| `pipeline.py` | `PolicyPipeline` — orchestrates `check_intake / check_dispatch / check_response` |
+| `abstract_policy.py` | `PolicyDecision`, `AbstractPolicy` base class |
+
+`PolicyPipeline` accepts optional domain-specific instances for hydration, routing, metadata enrichment, synthesis, judge, guardian, and prompt injection — all provided by the domain via `DomainPolicyProvider`.
+
+#### 3.1.4 Agent layer (`mltek/agents/`)
+
+LangChain-backed agent infrastructure:
+
+| Module | Role |
+|---|---|
+| `agent_factory.py` | Generic factory; domain overrides via `register_agent_factory()` |
+| `graph.py`, `graph_builder.py` | LangGraph state-machine construction |
+| `lang_agents.py` | `call_structured_agent`, cached agent map, token tracking callbacks |
+| `bridge.py` | LangChain / LangSmith import shims |
+| `prompts.py` | Generic agent prompt templates |
+| `middleware/` | `JitPrivilegeMiddleware`, `SemanticToolPolicyMiddleware` (tool_intent), `ToolCallLimitMiddleware` (loop_guard), `ToolResultCondenser`, `CorrelationMiddleware` |
+
+#### 3.1.5 Orchestration layer (`mltek/orchestration/workflow_orchestrator.py`)
+
+Generic YAML/JSON workflow runner. Loads a step-list definition and executes each step through `call_resolver` — no `agent:` declaration needed in YAML. Steps support prompt templating, state extraction, skip conditions, and `eval_type` quality labelling.
+
+#### 3.1.6 Common infrastructure (`mltek/common/infra/`)
+
+| Module | Purpose |
+|---|---|
+| `context.py` | ContextVars: `_env_var`, `_active_agent`, `_token_phase`, `_jit_session_phase`, `_guardian_cleared`, etc. |
+| `audit_decorator.py` | `@audit_policy_decision`, `audit_inline`, `flush_pipeline_summary`, selective buffering per `_AUDIT_AGENTS` |
+| `request_context.py` | `RequestContext` — per-request state threaded through pipeline phases |
+| `config_loader.py` | `load_config` YAML loader |
+| `jit_token.py` | `set_jit_session` / JIT ContextVar helpers |
+| `output_adapter.py` | `OutputAdapter` — normalizes agent result shapes |
+| `error_helpers.py` | Shared error-handling decorators |
+| `vendor.py` | Bedrock inline-context helpers |
+
+### 3.2 Domain layer — `insuretek`
+
+`InsureTekDomainProvider` (`insuretek/domain_provider.py`) is the single glue point between the domain and `mltek`. It is registered once at startup via `register_domain_provider(InsureTekDomainProvider())`.
+
+```text
+startup
+  └── register_domain_provider(InsureTekDomainProvider())
+        ├── init_audit_config()         ← uses get_audit_config()
+        ├── init_routing_config()       ← uses get_routing_config()
+        ├── init_entity_patterns()      ← uses get_entity_patterns()
+        └── register_agent_factory()    ← uses get_agent_factory()
+```
+
+Domain sub-packages:
+
+| Sub-package | Contents |
+|---|---|
+| `insuretek/domain/` | `model_applicant.py`, `enums.py`, `constants.py`, `ids.py`, `validators.py` |
+| `insuretek/common/agents/` | `factory.py` (`InsureTekAgentFactory`), `prompts.py` (all system prompts, `AGENT_DOMAIN`, `GUARDIAN_GUARDED_AGENTS`) |
+| `insuretek/policy/context/` | `hydration_fetchers.py` (`INSURETEK_FETCHERS`), `metadata_store.py` (`StaticMetadataStore`) |
+| `insuretek/policy/output/` | `semantic_synthesis_policy.py` (ISAR-guided LLM narrative), `isar_evidence_chain.py` |
+| `insuretek/config/` | `resolver_config.yaml`, `policy_config.yaml`, `config.py` |
+
+Domain config files are the single source of truth for all policy parameters (guardian config, caller auth, agent cost, JIT elevation, routing, audit agents).
+
+### 3.3 Data access layer — `core_data`
+
+| Sub-package | Contents |
+|---|---|
+| `core_data/db/models/` | `models_applicant.py`, `models_policy_audit.py`, `models_base.py` |
+| `core_data/db/dynamodb/` | `factory.py` (table factory), `db_init.py` |
+| `core_data/db/graph/` | Neo4j client, graph operations, sync worker |
+| `core_data/db/vector/` | Vector store factory |
+| `core_data/repositories/` | `applicant_repository.py`, `policy_audit_repository.py`, `vector_repository.py`, `portal_access_repository.py`, `login_activity_repository.py` |
+| `core_data/service/` | `applicant_service.py`, `policy_audit_service.py`, `graph_service.py` |
+
+`policy_audit_service.get_audit_writer()` returns `(write_fn, emit_fn)` consumed by `InsureTekDomainProvider.get_audit_writer()`.
+
+### 3.4 Intake layer — `bff_service`
+
+- Captures applicant draft data through conversational turns
 - Validates required fields and preserves partial progress
-- Maintains in-memory session state keyed by session_id
-- Applies intake-side policy checks for sensitive content and malformed input
-- Shortens session IDs to 8 hex chars for backend compatibility
+- Maintains in-memory session state keyed by `session_id` (shortened to 8 hex chars)
+- Applies intake-side policy checks (`prompt_validation_policy.py`) for sensitive content and malformed input
+- Calls `call_resolver` / `call_resolver_safe` for all LLM-driven responses
 
-### 3.2 Workflow orchestration
+### 3.5 MCP tool server — `mcp_server`
 
-- Manages onboarding workflow state and approval tasks
-- Uses explicit transition rules to prevent illegal state jumps
-- Advances state based on webhook results from external gate checks
-- Computes partial and final approval status from essential gate outcomes
+Exposes domain data as MCP tools consumed by agents during execution:
 
-### 3.3 Agent routing and execution
+| Handler | Tools exposed |
+|---|---|
+| `handlers/applicant_tools.py` | Applicant CRUD, lookup |
+| `handlers/graphrag_tools.py` | Graph relationship queries |
+| `handlers/policy_tools.py` | Policy audit query tools (9 tools) |
+| `insuretek_core_data.py` | Core data tools |
+| `insuretek_agent_workflow.py` | Workflow step tools |
+| `insuretek_semantic_context.py` | ISAR explain, semantic context |
 
-- Uses semantic and intent routing to select the correct agent
-- Supports specialized agents for boarding, merchant lookup, workflow queries, hierarchy, and semantic analysis
-- Applies `Guardian` safety checks before agent execution
-- Uses middleware for tool deduplication, semantic gating, and tool-result condensation
+### 3.6 Workflow engine — `workflow_engine`
 
-### 3.4 Policy and safety layer
+| Sub-package | Contents |
+|---|---|
+| `domain/workflow_domain.py` | Workflow states, transition rules, gate evaluation logic |
+| `repository/` | Workflow repository, checkpointer, request repository |
+| `service/applicant_workflow.py` | Applicant onboarding workflow driver |
+| `service/workflow_graph.py` | LangGraph-based workflow state machine |
+| `service/orchestrator_graph.py` | Orchestrator graph integration |
+| `service/gate_check_client.py` | External gate-check HTTP client |
+| `service/workflow_endpoints.py` | Internal HTTP endpoints for workflow operations |
+| `config/gate_check_config.py` | Gate-check configuration |
 
-- `IntakePolicy` validates intake text and session interactions
-- `PolicyPipeline` (`src/shared/policy/pipeline.py`, config-driven via `PolicyPipelineConfig.from_dict`) runs the mechanical checks in three phases — intake (`RateLimitPolicy`, `PromptInjectionPolicy`), dispatch (`CallerAuthorizationPolicy`, `AgentCostPolicy`, `TokenBudgetPolicy`), response (`TokenBudgetPolicy.consume`, `SensitiveRedactionPolicy`)
-- `GuardianPolicy` performs pre-agent route safety checks and can escalate ambiguous requests to reflection; pre-route check fires with `agent_id="pre_route"` before routing is resolved
-- `ReflectionPolicy` attempts safe reformulation when Guardian finds an ambiguous block; resolver calls `evaluate()` (not `handle_blocked()`) so the audit decorator fires
-- `RoutingPolicy` gates agent dispatch based on (env, agent) rules; replaces hardcoded routing blocks with a configurable rules dict — new constraints require only a new entry, no resolver edits
-- `JitElevationPolicy` evaluates session phase and env before a restricted write tool may execute; `collecting` phase is always denied; shadow env follows the same phase rules as prod
-- `JitPrivilegeMiddleware` enforces JIT gating at position 0 in the middleware stack — policy check and execution happen in the same step, no token round-trip or extra graph step
-- `SemanticToolPolicyMiddleware` scores intent alignment on every tool call; first call uses LLM scoring, subsequent calls in the same run are pre-cleared by guardian and audited as `checked=False`
-- `LLMJudgePolicy` performs post-response quality checks for mutating agents; `source` and `env` are passed through so the audit record carries full context
-- `MetadataEnrichmentPolicy` injects statistical, relational, and operational context before agent dispatch; enrichment is audited with `domain` and `elapsed_ms` (context block excluded from audit to avoid size bloat)
-- `SemanticSynthesisPolicy` (`src/shared/policy/output/semantic_synthesis_policy.py`) post-agent output policy, split from `MetadataEnrichmentPolicy`; synthesizes registered tool outputs (currently `isar_explain_merchant`) into an LLM narrative via `call_chat_agent` and a ISAR-guided system prompt; returns `isar_synthesis` key in the result dict; tagged with `@with_token_phase("synthesize")`
-- `SensitiveRedactionPolicy` (`src/shared/policy/output/sensitive_redaction_policy.py`) replaces `PiiEgressPolicy`; same scrub/block behavior for SSN, routing numbers, account numbers, phone, and credit card patterns; pre-masks UUID tokens to prevent false positives on structured IDs
+### 3.7 HTTP gateway — `web_gateway`
 
-### 3.6 Policy audit subsystem
-
-- Every policy gate decision is persisted to an append-only `policy_audit` table (Postgres and DynamoDB backed, env-aware shadow table)
-- `PolicyAuditRecord` captures: `audit_id`, `session_id`, `correlation_id`, `request_id`, `policy_type`, `operation`, `allowed`, `reason`, `env`, `metadata`, `created_at`
-- `@audit_policy_decision` decorator wraps any `evaluate()` method returning `PolicyDecision`; schedules a fire-and-forget `asyncio.create_task` — never blocks the request path; swallows all persistence errors
-- `audit_inline` provides the same write path for middleware that doesn't use a Policy `evaluate()` method (e.g. `SemanticToolPolicyMiddleware`, `MetadataEnrichmentPolicy`)
-- **Selective auditing gate** — `_active_agent` ContextVar is set by the resolver after routing; `_AUDIT_AGENTS = {"boarding_agent", "hierarchy_agent"}` controls full auditing; non-boarding agents only write DENIED decisions; ALLOWED read-path decisions are never persisted
-- Boarding/hierarchy allowed gate decisions buffer per correlation_id (`_correlation_buffer`, max 50) and flush as one `pipeline_summary` record — tagged with a domain (`merchant`/`pricing`/`auth`/`platform`/`group`/`general`) inferred from intent or tool operations and stored in `metadata.intent_domain`. Flush runs after `check_response` and again in `AgentExecutor.ainvoke`'s `try/finally` as a safety net
-- `llm_judge` and `reflection` write immediately via `await _persist()` (`_ALWAYS_AUDIT_TYPES`) so they can't bleed into the next agent's buffer; `semantic_tool` and denied decisions also stay immediate; non-boarding agents are unaffected
-- `token_budget` writes directly via `_DIRECT_ONLY_TYPES` — bypasses pipeline_summary buffering entirely even for boarding/hierarchy; `TokenBudgetPolicy.consume()` emits a standalone `audit_inline` record after recording actual spend
-- `MerchantOrchestrator` steps propagate `request_id`/`session_id` via context vars so every step writes audit records with full context, giving complete workflow audit trails
-- Nine MCP tools expose audit data to the servicing agent: `get_policy_audit_by_session`, `get_policy_audit_by_correlation`, `get_policy_audit_by_policy_type`, `get_policy_audit_by_request_id`, `get_policy_audit_summary`, `get_forensic_audit`, `get_causal_chain`, `get_cross_session_history`, `get_quality_summary`
-- Policy types covered: `onboarding`, `servicing`, `guardian`, `routing`, `jit_elevation`, `llm_judge`, `reflection`, `metadata`, `semantic_tool`, `live_hydration`, `quality_metric`, `pipeline_summary`, `token_budget`
-
-### 3.5 Storage and data services
-
-- **Core relational storage** holds merchants, pricing, platforms, groups, and auth credentials
-- **Workflow state store** retains workflow progress, tasks, and audit metadata
-- **Graph store** powers relationship traversal, similarity, and risk analytics
-- **Policy audit store** append-only `policy_audit` / `policy_audit_shadow` tables; indexed on `session_id`, `correlation_id`, `policy_type`, `request_id`, and `created_at`; DynamoDB equivalent uses GSIs on the same keys
+Starlette/FastAPI application. Routes delegate to `bff_service` (intake) and `workflow_engine` (workflow state transitions). React frontend served from `web_gateway/static/`.
 
 ---
 
@@ -112,66 +229,85 @@ User input → Intake → Orchestrator → Workflow engine
 ### Policy execution order
 
 ```text
-Intake validation (IntakePolicy)            → audit: onboarding / servicing
+Intake validation (BFF prompt_validation_policy)
   ↓
 Intake pipeline (PolicyPipeline.check_intake)
-    → RateLimitPolicy → PromptInjectionPolicy
+    → RateLimitPolicy → PromptInjectionPolicy → LiveHydrationPolicy
   ↓
 Guardian pre-flight (agent_id="pre_route")  → audit: guardian [DENIED only for non-boarding]
   ├─ Hard block → return immediate rejection
-  ├─ Needs reflection → Reflection Policy  → audit: reflection
-  └─ Allow → set_active_agent(target)
+  └─ Allow → intent classification (keyword / semantic / LLM)
                ↓
              RoutingPolicy check             → audit: routing
                ├─ Block (env/agent rule) → return rejection
                └─ Allow
                     ↓
-             Guardian post-route check       → audit: guardian
-                    ↓
              Dispatch pipeline (PolicyPipeline.check_dispatch)
                → CallerAuthorizationPolicy → AgentCostPolicy → TokenBudgetPolicy
+               → MetadataEnrichmentPolicy inject    → audit: metadata
                     ↓
-             MetadataEnrichmentPolicy inject    → audit: metadata
+             GuardianDispatchPolicy (post-route)     → audit: guardian
+               ├─ Hard block → return rejection
+               ├─ Needs reflection → ReflectionPolicy → audit: reflection
+               └─ Allow
                     ↓
-             Agent dispatch
+             Agent dispatch (@with_token_phase("agent"))
                     ↓
-             JIT phase/env gate              → audit: jit_elevation (boarding_agent only)
+             JIT phase/env gate              → audit: jit_elevation (write agents only)
                ├─ DENIED → [JIT_DENIED] ToolMessage
-               └─ GRANTED → SemanticToolPolicy → audit: semantic_tool (every tool call)
+               └─ GRANTED → SemanticToolPolicyMiddleware → audit: semantic_tool
                     ↓
-             Tools execute
+             MCP Tools execute
                     ↓
-             SemanticSynthesisPolicy.synthesize (post-agent)
-               ├─ isar_explain_merchant → LLM narrative → isar_synthesis key
-               └─ no matching tool → pass-through
+             PolicyPipeline.synthesize()
+               └─ SemanticSynthesisPolicy (domain-supplied) → isar_synthesis key
                     ↓
-             LLMJudge post-execution         → audit: llm_judge (mutating agents only)
+             PolicyPipeline.check_response()
+               → LLMJudgePolicy (mutating agents)  → audit: llm_judge
+               → TokenBudgetPolicy.consume         → audit: token_budget
+               → SensitiveRedactionPolicy
                     ↓
-             Response pipeline (PolicyPipeline.check_response)
-               → TokenBudgetPolicy.consume → SensitiveRedactionPolicy
+             flush_pipeline_summary (boarding/hierarchy → pipeline_summary audit)
 ```
+
+### Intent routing order
+
+```text
+1. Keyword match (regex over `policy_config.yaml` keyword_routes)
+2. Semantic router (embedding similarity, threshold=0.35 in auto mode)
+3. LLM intent classifier (structured output → IntentResolution)
+4. Fallback to default_route (sme_agent)
+```
+
+Routing mode is configurable via `resolver_config.yaml` `graph.routing_mode` (`auto` | `semantic` | `intent`).
 
 ### Audit write rules
 
 | Agent | ALLOWED decisions | DENIED decisions |
 |---|---|---|
-| `boarding_agent` | Buffered then summarized per request | Written |
-| all others | **Skipped** | Written |
+| agents in `audit_agents` (config) | Buffered per `correlation_id`, flushed as `pipeline_summary` | Written immediately |
+| all others | **Skipped** | Written immediately |
 
-Pre-routing decisions (intake, guardian pre-route) use `active_agent=""` — not in `_AUDIT_AGENTS` — so they write only on DENIED. This captures blocked intake and pre-route threat blocks without producing noise for the normal servicing read path.
+Pre-routing decisions (intake, guardian pre-route) use `active_agent=""` — not in `audit_agents` — so they write only on DENIED. This prevents noise on the normal read path.
+
+`_ALWAYS_AUDIT_TYPES`: `llm_judge`, `reflection` — written immediately, never buffered.
+`_DIRECT_ONLY_TYPES`: `token_budget` — bypasses `pipeline_summary` buffering entirely.
 
 ### LLM call optimization
 
-- Common production path uses zero semantic tool LLM calls when Guardian already clears the intent
-- Read-only lookups often skip LLMJudge entirely
-- Write workflows typically incur only one judge call after execution
+- When Guardian pre-clears an intent (`_guardian_cleared=True`), `SemanticToolPolicyMiddleware` skips the LLM scorer for the first tool call — zero semantic LLM calls on the common Guardian-cleared path.
+- Read-only lookups skip `LLMJudge` entirely.
+- Write workflows incur only one judge call after execution.
+- `SemanticSynthesisPolicy.synthesize()` only fires when a matching `ToolMessage` is found in the reversed message list — no LLM call for non-synthesis agents.
 
 ### Tool safety
 
-- Deduplication middleware prevents repeated identical tool calls in the same reasoning run
-- `JitPrivilegeMiddleware` performs phase/env gating for restricted write tools in a single middleware step, allowing granted calls to execute immediately without a retry token round-trip
-- ToolResultCondenser reduces board-agent payload size by replacing large write results with compact summaries
-- Shadow mode blocks `sme_agent` routing and `kg_*` tools via `RoutingPolicy`
+- `JitPrivilegeMiddleware` — position 0 in write-agent middleware stack. Phase/env gate evaluated in a single step; GRANTED calls execute immediately without a token round-trip.
+- `SemanticToolPolicyMiddleware` — scores intent alignment on every tool call. First scored call uses LLM; pre-cleared calls skip scoring.
+- `ToolCallLimitMiddleware` — hard-caps tool calls per agent run and forces a text response to prevent recursion-limit failures.
+- `ToolResultCondenser` — compacts large write-tool results to reduce agent payload size.
+- Deduplication: identical tool calls within the same reasoning run are suppressed by `CorrelationMiddleware`.
+- Shadow mode blocks specific agents and write tools via `RoutingPolicy` declarative rules.
 
 ---
 
@@ -201,48 +337,33 @@ Pre-routing decisions (intake, guardian pre-route) use `active_agent=""` — not
 
 ---
 
-## 6. Recent architecture updates
+## 6. Policy audit subsystem
 
-- **`PiiEgressPolicy` renamed to `SensitiveRedactionPolicy`**: file is `src/shared/policy/output/sensitive_redaction_policy.py`; config class is `SensitiveRedactionConfig`; behavior unchanged (scrub/block SSN, routing, account, phone, CC). UUID tokens are pre-masked before PII patterns to prevent false positives on structured IDs.
-- **`SemanticSynthesisPolicy` split from `MetadataEnrichmentPolicy`**: synthesis logic (ISAR-guided LLM narrative from tool output) is now its own output-layer class in `src/shared/policy/output/semantic_synthesis_policy.py`. `MetadataEnrichmentPolicy` retains only context injection; `PolicyPipeline` receives a separate `isar_synthesis` parameter; resolver builds both side by side.
-- **Token phase tracking**: `_token_phase` ContextVar in `context.py` tags every LLM-consuming stage. `@with_token_phase(phase)` decorator sets the phase before a call and logs tokens consumed after; handles both regular `async def` and `async def` generators (fixes broken SSE `stream_reply`). Stages: `routing`, `agent`, `synthesize`, `judge`, `reflection`, `prompt_injection`, `metadata_enrichment`, `semantic_tool`, `workflow_decision`.
-- **Callback token tracking across LangChain task barrier**: LangChain callbacks run in child asyncio tasks where ContextVar writes don't propagate back to the parent. `_parent_task_id` ContextVar + `_task_tokens: dict[int, int]` bypass this — callbacks call `add_request_tokens(n)` which writes into the parent's bucket keyed by `_parent_task_id`; `get_request_tokens()` reads the current task's bucket. `_TokenUsageCallback` in `lang_agents.py` implements `on_chat_model_end` with `on_llm_start` fallback estimation.
-- **`TokenBudgetPolicy.consume()` audit**: consume now emits a standalone `audit_inline` record tagged `token_budget`; this type is in `_DIRECT_ONLY_TYPES` in `audit_decorator.py` — it always writes directly, bypassing pipeline_summary buffering even for boarding/hierarchy agents. Ensures token spend is independently auditable separate from gate decisions.
-- **Policy audit subsystem**: append-only `policy_audit` table with dual Postgres/DynamoDB backends. All 9 policy types emit fire-and-forget audit records via `@audit_policy_decision` decorator or `audit_inline`. Selective gate: `boarding_agent` writes all decisions; other agents write DENIED-only. Five MCP query tools expose audit data via the servicing path.
-- **Audit-selective agent gating**: `_active_agent` ContextVar set by resolver after routing; `_AUDIT_AGENTS = {"boarding_agent"}` controls full audit scope. Pre-routing policy decisions (intake, guardian pre-route) default to `""` agent — write DENIED only.
-- **Reflection wiring fix**: resolver now calls `sidecar.evaluate()` instead of `handle_blocked()` directly, ensuring the `@audit_policy_decision` decorator fires for every reflection run.
-- **JIT audit fix**: `operation_arg=1` replaced with `operation_kwarg="tool_name"` — tool name is always passed as a keyword argument; positional index was out-of-bounds.
-- **LLMJudge audit fix**: resolver now passes `source=source, env=env` to `judge.evaluate()` so operation resolves to the source channel instead of falling back to the function name.
-- **Guardian pre-route label**: pre-routing guardian check now uses `agent_id="pre_route"` instead of `"unknown"` for audit clarity.
-- **Semantic tool coverage**: `SemanticToolPolicyMiddleware` now audits every tool call, not just the first. Pre-cleared calls record `checked=False`; scored calls record `checked=True` with score.
-- **Metadata audit**: `MetadataEnrichmentPolicy.evaluate()` calls `audit_inline` with `domain`, `enriched`, and `elapsed_ms`; the full context block is excluded to avoid audit record size bloat.
-- **Boarding-agent audit summary**: `_persist`/`audit_inline` buffer allowed boarding/hierarchy gate decisions per correlation_id (`_correlation_buffer`, capped at 50) instead of writing immediately; `flush_pipeline_summary` runs in `AgentExecutor.ainvoke`'s `try/finally` so it fires on every exit path. Each request yields one domain-tagged `pipeline_summary` (`metadata.controls` + `metadata.intent_domain`) plus individual `semantic_tool`/denial records — non-boarding requests write nothing on the allowed path.
-- **JIT privilege gating**: `JitPrivilegeMiddleware` sits at position 0 in write-agent stacks (boarding, platform, hierarchy). Policy is evaluated in a single step — GRANTED calls execute immediately; no token round-trip, no extra LangGraph step. Gate is phase-only: `collecting` → deny; `offering_optional` / `confirming` / `done` → grant (prod and shadow). `set_jit_session` must be called at every resolver entry point (BFF endpoints, workflow activation node, merchant orchestrator).
-- **RoutingPolicy**: replaces the hardcoded `sme_agent` shadow block in `resolver.py` with a declarative `_DEFAULT_RULES` dict. Adding new (env, agent) routing constraints requires only a new dict entry — no resolver edits.
-- **ToolResultCondenser**: compacts large boarding tool outputs while keeping error details intact
-- **Workflow state guard**: explicit transition matrix added to the workflow domain
-- **Create idempotency**: DynamoDB conditional writes + BFF pre-flight guard for duplicate onboarding requests
-- **Shadow env**: shadow routes to shadow DynamoDB tables for boarding prompt testing; write tools are permitted in shadow (JIT phase gate still applies)
-- **Resilience**: graceful recovery from graph recursion failures with no successful tool result
-- **Policy hardening**: intake credit-card detection now includes Luhn validation
-- **Session ID stability**: session identifiers shortened for backend alignment
+- Every policy gate decision is persisted to an append-only DynamoDB `policy_audit` table (shadow table for shadow env)
+- `PolicyAuditRecord` captures: `audit_id`, `session_id`, `correlation_id`, `request_id`, `policy_type`, `operation`, `allowed`, `reason`, `env`, `metadata`, `created_at`
+- `@audit_policy_decision` decorator wraps any `evaluate()` method returning `PolicyDecision`; schedules a fire-and-forget `asyncio.create_task` — never blocks the request path; swallows all persistence errors
+- `audit_inline` provides the same write path for middleware that doesn't use a Policy `evaluate()` method
+- Boarding/write-agent allowed gate decisions buffer per `correlation_id` (`_correlation_buffer`, max 50) and flush as one `pipeline_summary` record tagged with `intent_domain`
+- Nine MCP tools expose audit data: `get_policy_audit_by_session`, `get_policy_audit_by_correlation`, `get_policy_audit_by_policy_type`, `get_policy_audit_by_request_id`, `get_policy_audit_summary`, `get_forensic_audit`, `get_causal_chain`, `get_cross_session_history`, `get_quality_summary`
+- Policy types: `onboarding`, `servicing`, `guardian`, `routing`, `jit_elevation`, `llm_judge`, `reflection`, `metadata`, `semantic_tool`, `live_hydration`, `quality_metric`, `pipeline_summary`, `token_budget`
 
 ---
 
 ## 7. Design principles
 
+- `mltek` is domain-agnostic: it imports no domain code; all customization enters through `DomainPolicyProvider`
 - Keep workflow logic separate from presentation and conversational state
 - Prefer modular, auditable services over monolithic execution paths
 - Enforce policy before state mutation whenever possible
-- Make production and shadow behavior explicit and isolated
+- Make production and shadow behavior explicit and isolated via `RoutingPolicy` declarative rules
 - Support safe retries, idempotency, and invalid state detection
-- Design for extensibility, especially for future policy, agent, or graph capabilities
+- Design for extensibility: new domain requires only a new `DomainPolicyProvider` implementation
 
 ---
 
 ## 8. Next steps
 
-- Add a more formal L1/L2 architecture diagram and component map
+- Add a formal L1/L2 architecture diagram and component map
 - Document non-functional requirements for latency, resilience, and policy throughput
 - Define shadow/test environment behavior and deployment isolation more explicitly
 - Capture security assumptions for credential provisioning and agent tool execution
@@ -250,35 +371,33 @@ Pre-routing decisions (intake, guardian pre-route) use `active_agent=""` — not
 
 ---
 
-## 10. Things to remember
+## 9. Things to remember
 
 ### Policy LLM cost optimisation
 - `SemanticToolPolicyMiddleware` scores only the **first tool call** per agent run (`_run_checked` ContextVar). Subsequent tool calls in the same run skip the LLM scorer entirely.
 - When Guardian clears an intent (LOW risk, `allowed=True`), the resolver sets a `_guardian_cleared` ContextVar before invoking the agent. `abefore_agent` reads this and pre-sets `_run_checked=True`, so **zero semantic LLM calls** occur on the Guardian-cleared common path.
-- `LLMJudge` is **skipped for read-only agents** (`merchant_agent`, `sme_agent`, etc.) — Guardian already auto-allows them and a wrong lookup answer is low-stakes.
-- `SemanticSynthesisPolicy.synthesize()` scans reversed message list for a ToolMessage whose `name` is in `_SYNTHESIS_REGISTRY` and `status != "error"`. If none found it returns the result unchanged — no LLM call on the default path for non-semantic agents.
+- `LLMJudge` is **skipped for read-only agents** — Guardian already auto-allows them and a wrong lookup answer is low-stakes.
+- `SemanticSynthesisPolicy.synthesize()` scans reversed message list for a ToolMessage whose `name` is in `_SYNTHESIS_REGISTRY` and `status != "error"`. If none found it returns the result unchanged — no LLM call on the default path for non-synthesis agents.
 
 ### Token phase tracking
-- Every LLM-consuming stage wraps its call with `@with_token_phase(phase)` or `async with with_token_phase(phase)`. This sets `_token_phase` so callbacks can identify which stage spent tokens.
-- LangChain callbacks (e.g. `_TokenUsageCallback`) run in child tasks. ContextVar writes from child tasks don't reach the parent — use `add_request_tokens(n)` which writes into `_task_tokens[_parent_task_id]` on the shared module-level dict. Call `get_request_tokens()` in the parent after agent execution to read the total.
-- `@with_token_phase` handles `async def` generators via `inspect.isasyncgenfunction` — avoids wrapping the generator result in an extra coroutine that would break SSE streaming.
+- Every LLM-consuming stage wraps its call with `@with_token_phase(phase)` or `async with with_token_phase(phase)`. Stages: `routing`, `agent`, `synthesize`, `judge`, `reflection`, `prompt_injection`, `metadata_enrichment`, `semantic_tool`, `workflow_decision`.
+- LangChain callbacks run in child tasks. ContextVar writes from child tasks don't reach the parent — use `add_request_tokens(n)` which writes into `_task_tokens[_parent_task_id]` on the shared module-level dict. Call `get_request_tokens()` in the parent after agent execution to read the total.
+- `@with_token_phase` handles `async def` generators via `inspect.isasyncgenfunction` to avoid breaking SSE streaming.
 
-### boarding_agent recursion limit and write-tool recovery
-- `boarding_agent` can call `get_merchant` before the write tool even when the prompt specifies the merchant_id directly. This consumes 2 graph nodes before the write, leaving fewer nodes for the agent to formulate a response.
-- `ToolCallLimitMiddleware(run_limit=2, exit_behavior="end")` is added to `boarding_agent` to hard-cap tool calls and force a text response after 2 tools, preventing a 3rd tool call that would hit the recursion limit.
-- `AgentExecutor.ainvoke` uses **`astream(stream_mode="values")`** instead of `ainvoke`. On `GraphRecursionError`, it scans the collected partial state for the last successful `ToolMessage`. If a write tool already completed, the partial result is returned normally — "Resolver dispatch completed" is logged and the orchestrator marks the step **PASS** instead of FAIL.
-- The pricing record in DynamoDB is written correctly even when the graph hits the recursion limit. The failure was a graph bookkeeping issue, not a data failure.
-
-### Merchant pricing data integrity
-- `deactivate_merchant_pricing` in `PricingRepository` calls `get_active_pricing` which returns only `records[0]`. If multiple active records exist (e.g. from a prior failed deactivation), only one is cleared. Fix: iterate `get_active_items` directly and deactivate all.
-- `get_active_pricing` has no `ORDER BY` — the first active record returned is non-deterministic. Should sort by `effective_at DESC` to consistently return the most recent record.
-- `PricingService.set_pricing` deactivates old pricing and creates new pricing in two separate calls with no transaction wrapper. A crash between them leaves the merchant with no active pricing.
+### Agent recursion limit and write-tool recovery
+- `ToolCallLimitMiddleware(run_limit=N, exit_behavior="end")` is added to write agents to hard-cap tool calls and force a text response, preventing a graph recursion limit failure.
+- `AgentExecutor._run_agent` uses **`astream(stream_mode="values")`** instead of `ainvoke`. On `GraphRecursionError`, it scans the collected partial state for the last successful `ToolMessage`. If a write tool already completed, the partial result is returned normally — the orchestrator marks the step **PASS** instead of FAIL.
 
 ### JIT context propagation
 - `_jit_session_phase` and `_jit_session_id` are ContextVars that default to `"collecting"` and `""`. If `set_jit_session` is never called, every restricted tool call is denied.
-- Must be called before any `call_resolver` / `call_resolver_safe` invocation: `generate_intake_stream`, `get_intake_message_response`, `get_servicing_message_response` (BFF), `_activate_merchant_node` (workflow graph), and `MerchantOrchestrator.run` (orchestrator).
-- Workflow engine callers use `set_jit_session("done", workflow_id_or_name)` — merchant has already cleared the full approval pipeline at that point.
-- `env` is NOT read from the JIT ContextVar; it comes from `_env_var` (set by `set_env` in the resolver), so env propagation is independent of JIT session setup.
+- Must be called before any `call_resolver` / `call_resolver_safe` invocation: BFF endpoints, workflow activation node, and orchestrator.
+- Workflow engine callers use `set_jit_session("done", workflow_id)` — applicant has already cleared the full approval pipeline at that point.
+- `env` is NOT read from the JIT ContextVar; it comes from `_env_var` (set by `set_env` in the resolver).
 
 ### Agent source trust
 - `source=internal` bypasses Guardian's `checked_sources` filter (which defaults to `{"react"}`). Internal workflow steps are trusted callers; Guardian skips them and returns LOW/allowed. The `_guardian_cleared` ContextVar is still set, so semantic and judge are also skipped — zero policy LLM calls for internal workflow steps on the common path.
+
+### Domain provider registration
+- `register_domain_provider(InsureTekDomainProvider())` must be called once at startup before any `call_resolver` invocation.
+- Registration triggers lazy initialization of `audit_config`, `routing_config`, and `entity_patterns` (via `init_*` helpers called inside `register_domain_provider`).
+- `resolver_config.yaml` keys that are absent fall back to the domain provider's getter methods, so YAML is the primary source and the provider is the fallback.
